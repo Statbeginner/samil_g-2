@@ -650,6 +650,7 @@ select.text-input { appearance: auto; }
 .report-bubble .next { font-family: var(--font-body); font-size: 15px; color: var(--accent); }
 .report-bubble .src-tag { align-self: flex-start; margin: 0; }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tiles .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .tile { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 18px; background: var(--surface); border: 2px solid var(--line); min-width: 0; }
 .tile small { font-size: 13px; color: var(--fg-muted); }
 .tile b { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -735,57 +736,12 @@ select.text-input { appearance: auto; }
 .badge-stages li.on .bs-check { background: var(--success); color: var(--bg); }
 @media (max-width: 340px) { .badge-grid { grid-template-columns: repeat(2, 1fr); } }
 
-/* 인증 사진·영상 */
-.media-pick { display: flex; flex-wrap: wrap; gap: 10px; }
-.media-item, .media-add {
-  position: relative; width: 84px; height: 84px; border-radius: 14px; overflow: hidden; flex: none;
-  display: grid; place-items: center; background: var(--surface-2);
-}
-.media-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.media-add {
-  border: 2px dashed var(--line); color: var(--accent); font-family: var(--font-display); font-size: 13px; cursor: pointer;
-  align-content: center; gap: 0; text-align: center; line-height: 1.3;
-}
-.media-add span { font-size: 26px; line-height: 1; }
-.media-add:hover { border-color: var(--accent); }
-.field:has(#cm-file:focus-visible) .media-add { outline: 3px solid var(--accent); outline-offset: 2px; }
-.media-x {
-  position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border: 0; border-radius: 50%; display: grid; place-items: center;
-  background: rgba(20, 12, 6, .65); color: #FFFFFF;
-}
-.media-x svg { width: 16px; height: 16px; }
-.thumb-ph { font-size: 26px; color: var(--fg-muted); display: grid; place-items: center; width: 100%; height: 100%; }
-.play {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; border-radius: 50%;
-  display: grid; place-items: center; background: rgba(20, 12, 6, .6); color: #FFFFFF; font-size: 12px; padding-left: 2px; pointer-events: none;
-}
-.dur { position: absolute; right: 4px; bottom: 4px; padding: 0 5px; border-radius: 6px; background: rgba(20, 12, 6, .65); color: #FFFFFF; font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; }
-.thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.thumb { position: relative; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--surface-2); flex: none; }
-.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
-.thumb:hover img { transform: scale(1.06); }
-.proof-list { display: flex; flex-direction: column; gap: 10px; }
-.proof-row { display: flex; flex-direction: column; gap: 2px; }
-.overlay.viewer { background: #0E0B09; color: #F6EEE7; opacity: 0; transition: opacity .2s; }
-.overlay.viewer.in { opacity: 1; }
-.viewer-head { display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 16px; font-family: var(--font-display); }
-.viewer-head span:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.viewer-head .icon-btn { color: #F6EEE7; }
-.viewer-count { font-size: 13px; opacity: .7; font-variant-numeric: tabular-nums; }
-.viewer-body { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 8px; }
-.viewer-body .thinking { color: #B4A598; }
-.viewer-media { max-width: 100%; max-height: 100%; min-height: 0; object-fit: contain; border-radius: 8px; background: #000; }
-.viewer-miss { margin: 0; text-align: center; font-size: 14px; color: #B4A598; }
-.viewer-nav { display: flex; justify-content: center; gap: 12px; padding: 4px; }
-.viewer-cap { margin: 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 14px; color: #B4A598; }
-
 /* 데모 데이터 토글 */
 .demo-toggle { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
 .demo-toggle b { font-family: var(--font-display); font-weight: 400; font-size: 15px; }
 .switch.sm { width: 46px; height: 28px; }
 .switch.sm span { width: 20px; height: 20px; left: 4px; top: 4px; }
 .switch.sm[aria-checked="true"] span { transform: translateX(18px); }
-.full-inner .btn-text { margin-top: -6px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
@@ -1203,7 +1159,7 @@ select.text-input { appearance: auto; }
     3: '"잠깐 여쭤봐도 될까요?"로 시작하면 부담이 줄어요. 커피 타이밍을 노려보세요.',
     4: '먼저 내 소속과 이름을 한 줄로 소개하고 시작하면 자연스러워요.',
   };
-  const SOLO_TIP = '혼자 바로 할 수 있어요. 끝나면 인증 사진을 남겨두면 기록이 더 생생해져요.';
+  const SOLO_TIP = '혼자 바로 할 수 있어요. 5분만 내서 지금 바로 해봐요.';
   const QUESTS = QUEST_ROWS.map(([id, cat, stage, title, minutes, together, sub]) => {
     const difficulty = difficultyOf(stage, minutes);
     return {
@@ -1527,7 +1483,7 @@ JSON으로만 답해: {"polite":"정중하게","friendly":"친근하게","short"
       const res = await AI.json(`${AI_PERSONA}
 이번 주 활동을 보고 한 줄 코멘트와 다음 주 추천 방향을 써줘.
 사용자: ${Engine.profileBrief(s)}
-이번 주: 완료 퀘스트 ${sum.quests}개, 획득 ${sum.xp}XP, 함께한 퀘스트 ${sum.people}개, 인증 남긴 퀘스트 ${sum.proofs}개, 카테고리별 ${cats}
+이번 주: 완료 퀘스트 ${sum.quests}개, 획득 ${sum.xp}XP, 함께한 퀘스트 ${sum.people}개, 카테고리별 ${cats}
 JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이내 다음 주 추천 방향"}`);
       const out = { comment: str(res?.comment, 80), next: str(res?.next, 80) };
       if (!out.comment || !out.next) throw { code: 'invalid' };
@@ -1622,7 +1578,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       s.questHistory.push({ kind: 'step', uid: item.uid, questId: item.questId, category: QMAP[item.questId].cat, date: Clock.today(), completedAt: nowISO(), xp: STEP_XP, step: i });
       return { before, after: this.snapshot(s), doneCount: item.steps.filter((x) => x.done).length };
     },
-    completeQuest(s, item, { media = [] } = {}) {
+    completeQuest(s, item) {
       const q = QMAP[item.questId];
       const before = this.snapshot(s);
       this.award(s, q.xp, { gems: GEMS_PER_QUEST });
@@ -1630,7 +1586,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       s.questHistory.push({
         kind: 'quest', uid: item.uid, questId: q.id, title: q.title, category: q.cat, stage: q.stage, together: q.together,
         xp: q.xp, date: Clock.today(), completedAt: nowISO(),
-        media,   // [{ id, type: 'image' | 'video', thumb, duration }] 원본은 IndexedDB
       });
       const after = this.snapshot(s);
       const newBadges = Badges.check(s);
@@ -1652,7 +1607,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     const interestCats = Object.keys(Engine.interestCats(s));
     const pool = [...new Set([...interestCats, ...Object.keys(byCat)])];
     const least = pool.length ? pool.sort((a, b) => (byCat[a] || 0) - (byCat[b] || 0))[0] : null;
-    return { wk, end, quests: qs.length, xp, people: qs.filter((h) => h.together).length, proofs: qs.filter((h) => h.media?.length).length, byCat, most: sorted[0]?.[0] || null, least };
+    return { wk, end, quests: qs.length, xp, people: qs.filter((h) => h.together).length, byCat, most: sorted[0]?.[0] || null, least };
   }
 
   /* =========================================================
@@ -2712,11 +2667,10 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           ${it.reason ? `<p class="q-reason">추천 이유 · ${esc(it.reason)}</p>` : ''}
           ${this.badgeHint(q)}
           <section class="split" aria-label="작게 쪼갠 단계">${this.splitHTML(it, q)}</section>
-          ${done ? this.proofHTML(it) : ''}
         </div>
         <footer class="page-foot">
           ${done
-            ? this.proofButton(it)
+            ? '<button type="button" class="btn btn-secondary" disabled>완료한 퀘스트예요 ✓</button>'
             : '<button type="button" class="btn btn-primary" data-act="complete">완료했어요</button>'}
           ${extra.length ? `<div class="btn-row n${extra.length}">${extra.join('')}</div>` : ''}
         </footer>`;
@@ -2725,19 +2679,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       this.el.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => this.action(b.dataset.act)));
       this.el.querySelectorAll('[data-step]').forEach((cb) => cb.addEventListener('change', () => this.check(Number(cb.dataset.step))));
       this.el.querySelector('[data-badge]')?.addEventListener('click', (e) => BadgeSheet.open(e.currentTarget.dataset.badge));
-      bindThumbs(this.el);
-    },
-    proofHTML(it) {
-      const h = App.state.questHistory.find((x) => x.kind === 'quest' && x.uid === it.uid);
-      if (!h || !h.media?.length) return '';
-      return `<section class="card proof"><h3 class="sec-title sm">나의 인증</h3>${thumbsHTML(h.media, h.uid)}</section>`;
-    },
-    proofButton(it) {
-      const h = App.state.questHistory.find((x) => x.kind === 'quest' && x.uid === it.uid);
-      const n = h?.media?.length || 0;
-      return n < MEDIA_MAX
-        ? `<button type="button" class="btn btn-secondary" data-act="proof">📷 인증 사진·영상 ${n ? '더 ' : ''}남기기</button>`
-        : '<button type="button" class="btn btn-secondary" disabled>완료한 퀘스트예요 ✓</button>';
     },
     badgeHint(q) {
       const s = App.state, b = BADGE_MAP[`cat_${q.cat}`], p = Badges.progress(s, b);
@@ -2769,7 +2710,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       const it = this.item();
       if (!it) return;
       if (act === 'back') this.close();
-      if (act === 'proof') ProofSheet.open(it.uid);
       if (act === 'split') this.split(it);
       if (act === 'opener') Opener.open(it);
       if (act === 'complete') Complete.open(it);
@@ -2856,7 +2796,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     },
   };
 
-  // "완료했어요" → 바로 기록하고 축하. 인증 사진·영상은 축하 화면이나 상세에서 선택적으로 남김
+  // "완료했어요" → 바로 기록하고 축하
   const Complete = {
     busy: false,
     async open(it) {
@@ -2868,44 +2808,11 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       App.commit();
       Detail.close();
       Main.render();
-      const choice = await Celebration.show(res);
+      await Celebration.show(res);
       if (res.after.level > res.before.level) await LevelUp.show(res.before, res.after);
       for (const b of res.newBadges || []) await BadgeWin.show(b);
       this.busy = false;
       Main.render();
-      if (choice === 'proof') ProofSheet.open(cur.uid);
-    },
-  };
-
-  // 완료한 퀘스트에 인증 사진·영상 남기기
-  const ProofSheet = {
-    open(uid) {
-      const h = App.state.questHistory.find((x) => x.kind === 'quest' && x.uid === uid);
-      if (!h) return;
-      const room = MEDIA_MAX - (h.media?.length || 0);
-      if (room <= 0) { toast(`인증은 퀘스트당 ${MEDIA_MAX}개까지 남길 수 있어요.`); return; }
-      const wrap = Sheet.open(`
-        <h2 class="sheet-title">인증 남기기</h2>
-        <p class="sec-sub">${esc(h.title)}</p>
-        <div class="field"><p class="field-label">사진·영상 <span class="opt">(최대 ${room}개)</span></p>
-          <div class="media-pick" id="cm-media"></div>
-          <input type="file" id="cm-file" class="sr-only" accept="image/*,video/*" multiple>
-          <p class="field-error" id="cm-media-err" role="alert"></p>
-          <p class="sec-sub">사진은 자동으로 줄여서, 영상은 50MB까지 이 브라우저에만 저장돼요.</p></div>
-        <button type="button" class="btn btn-primary" id="cm-go" disabled>인증 저장하기</button>`, '인증 남기기');
-      const go = $('#cm-go', wrap);
-      const picker = mediaPicker(wrap, room, (n) => { go.disabled = n === 0; });
-      go.addEventListener('click', async () => {
-        if (go.disabled) return;
-        if (picker.busy()) { toast('첨부 파일을 준비하는 중이에요. 잠시만 기다려주세요.'); return; }
-        go.disabled = true; go.textContent = '저장 중…';
-        const { refs, failed } = await picker.save(uid);
-        const cur = App.state.questHistory.find((x) => x.kind === 'quest' && x.uid === uid);
-        if (cur && refs.length) { cur.media = [...(cur.media || []), ...refs].slice(0, MEDIA_MAX); App.commit(); }
-        Overlay.pop(wrap);
-        Main.refresh();
-        toast(failed ? `첨부 ${failed}개를 저장하지 못했어요. 브라우저 저장 공간을 확인해주세요.` : '인증을 남겼어요');
-      });
     },
   };
 
@@ -2928,7 +2835,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       let stop = null;
       setTimeout(() => { if (!reducedMotion() && el.isConnected) stop = runConfetti(el.querySelector('.confetti'), 2400); }, 120);
       el.querySelector('[data-continue]').addEventListener('click', () => { stop?.(); Overlay.pop(el); resolve(); });
-      el.querySelector('[data-proof]')?.addEventListener('click', () => { stop?.(); Overlay.pop(el); resolve('proof'); });
       el.dispatchEvent(new CustomEvent('mounted'));
       Celebration.lastEl = el;
     });
@@ -2950,8 +2856,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           <div class="cel-item"><span class="gem" aria-hidden="true">💎</span><b>+${gems}</b><small>재화</small></div>
         </div>
         ${goalNow ? '<p class="banner ok center">🎯 오늘 목표 달성!</p>' : ''}
-        <button type="button" class="btn btn-primary" data-continue>계속하기</button>
-        <button type="button" class="btn-text" data-proof>📷 인증 사진·영상 남기기</button>`, '퀘스트 완료 축하');
+        <button type="button" class="btn btn-primary" data-continue>계속하기</button>`, '퀘스트 완료 축하');
       const el = this.lastEl;
       countUp(el.querySelector('[data-xp]'), q.xp);
       setTimeout(() => setRing(el.querySelector('.cel-ring'), after.today / after.goal), 250);
@@ -3031,15 +2936,14 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       const wk = weekStartKey(Clock.today());
       const sum = weekSummary(s, wk);
       const quests = s.questHistory.filter((h) => h.kind === 'quest').slice().reverse();
-      const withMedia = quests.filter((h) => h.media?.length).length;
-      // 카테고리 넘기는 바: 전체 · 인증 · 카테고리 10개 (완료 개수 표시)
+      // 카테고리 넘기는 바: 전체 · 카테고리 10개 (완료 개수 표시)
       const catCount = (c) => quests.filter((h) => h.category === c).length;
-      const filters = [['all', '전체', quests.length], ...(withMedia ? [['media', '📷 인증', withMedia]] : []),
+      const filters = [['all', '전체', quests.length],
         ...Object.keys(CATEGORIES).map((c) => [c, `${CATEGORIES[c].emoji} ${CATEGORIES[c].label}`, catCount(c)])];
       if (!filters.some(([id]) => id === Main.histFilter)) Main.histFilter = 'all';
       const f = Main.histFilter;
       const fi = filters.findIndex(([id]) => id === f);
-      const list = quests.filter((h) => f === 'all' || (f === 'media' ? h.media?.length : h.category === f));
+      const list = quests.filter((h) => f === 'all' || h.category === f);
       const byDate = {};
       list.forEach((h) => { (byDate[h.date] = byDate[h.date] || []).push(h); });
       el.innerHTML = `
@@ -3074,10 +2978,9 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <div class="hist-day"><h3 class="hist-date">${fmtDay(d)}${d === Clock.today() ? ' · 오늘' : ''}</h3>
               ${hs.map((h) => `<div class="hist-item" style="${catVar(h.category)}">
                 <span class="cat-icon sm" aria-hidden="true">${CATEGORIES[h.category].emoji}</span>
-                <span class="q-main"><span class="q-title sm">${esc(h.title)}</span>
-                  ${thumbsHTML(h.media, h.uid)}</span>
+                <span class="q-main"><span class="q-title sm">${esc(h.title)}</span></span>
                 <span class="xp">+${h.xp}</span></div>`).join('')}
-            </div>`).join('') : `<div class="empty">${mascot('sm')}<p>${quests.length && f !== 'all' ? `아직 완료한 ${f === 'media' ? '인증' : CATEGORIES[f].label} 퀘스트가 없어요.<br>‹ › 를 눌러 다른 카테고리도 넘겨보세요` : '아직 완료한 퀘스트가 없어요.<br>홈에서 ⚡ 빠른 퀘스트부터 시작해보세요!'}</p></div>`}
+            </div>`).join('') : `<div class="empty">${mascot('sm')}<p>${quests.length && f !== 'all' ? `아직 완료한 ${CATEGORIES[f].label} 퀘스트가 없어요.<br>‹ › 를 눌러 다른 카테고리도 넘겨보세요` : '아직 완료한 퀘스트가 없어요.<br>홈에서 ⚡ 빠른 퀘스트부터 시작해보세요!'}</p></div>`}
         </section>`;
       $('#open-report', el).addEventListener('click', () => Report.open(wk));
       el.querySelectorAll('[data-badge]').forEach((b) => b.addEventListener('click', () => BadgeSheet.open(b.dataset.badge)));
@@ -3098,7 +3001,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           requestAnimationFrame(() => track.scrollTo({ left: Math.max(0, target), behavior: 'smooth' }));
         }
       }
-      bindThumbs(el);
     },
   };
 
@@ -3122,9 +3024,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <div class="tiles">
               <div class="tile"><small>완료한 퀘스트</small><b>${sum.quests}<span>개</span></b>${delta(sum.quests, prev.quests)}<em>지난주 ${prev.quests}</em></div>
               <div class="tile"><small>획득 XP</small><b>${sum.xp}<span>XP</span></b>${delta(sum.xp, prev.xp)}<em>지난주 ${prev.xp}</em></div>
-              <div class="tile"><small>함께한 퀘스트</small><b>${sum.people}<span>개</span></b>${delta(sum.people, prev.people)}<em>지난주 ${prev.people}</em></div>
-              <div class="tile"><small>인증 남긴 퀘스트</small><b>${sum.proofs}<span>개</span></b>${delta(sum.proofs, prev.proofs)}<em>지난주 ${prev.proofs}</em></div>
-            </div>
+              <div class="tile"><small>함께한 퀘스트</small><b>${sum.people}<span>개</span></b>${delta(sum.people, prev.people)}<em>지난주 ${prev.people}</em></div>            </div>
             <section class="card">
               <h3 class="sec-title sm">카테고리별 비율</h3>
               ${catRows.length ? `<div class="catbars">${catRows.map(([c, n]) => `<div class="catbar" style="${catVar(c)}">
@@ -3136,16 +3036,14 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
                 <div><small>가장 적게 한</small><b>${sum.least ? `${CATEGORIES[sum.least].emoji} ${CATEGORIES[sum.least].label} ${sum.byCat[sum.least] || 0}개` : '-'}</b></div>
               </div>
             </section>
-            ${(() => { const ms = App.state.questHistory.filter((h) => h.kind === 'quest' && h.date >= wk && h.date <= sum.end && h.media?.length); return ms.length ? `<section class="card"><h3 class="sec-title sm">이번 주 인증 📷</h3><div class="proof-list">${ms.map((h) => `<div class="proof-row"><span class="sec-sub">${fmtShort(h.date)} · ${esc(h.title)}</span>${thumbsHTML(h.media, h.uid)}</div>`).join('')}</div></section>` : ''; })()}
           </div>
           <footer class="page-foot"><button type="button" class="btn btn-primary" data-close-page>확인</button></footer>`;
         el.querySelectorAll('[data-close-page]').forEach((b) => b.addEventListener('click', () => Overlay.pop(el)));
-        bindThumbs(el);
       };
       draw();
       Overlay.push(el, 'page');
       const save = () => {
-        s.weeklyReports[wk] = { quests: sum.quests, xp: sum.xp, people: sum.people, proofs: sum.proofs, byCat: sum.byCat, comment, commentSource: source, generatedAt: nowISO() };
+        s.weeklyReports[wk] = { quests: sum.quests, xp: sum.xp, people: sum.people, byCat: sum.byCat, comment, commentSource: source, generatedAt: nowISO() };
         App.commit();
       };
       save();
@@ -3260,15 +3158,12 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           if (!DemoBackup.save(App.state)) { toast('내 기록을 보관하지 못해서 데모로 바꾸지 않았어요.'); return; }
           const demo = buildDemoState();
           demo.meta.demoMode = true;
-          await clearDemoMedia();
-          try { await seedDemoMedia(demo); } catch (e) { /* 저장 공간이 없으면 사진 없이 진행 */ }
           App.setState(demo);
           Main.req = { text: '', loading: false, result: null };
           Main.enter('settings');
-          toast('데모 데이터로 바꿨어요 (2주 기록 + 배지 + 인증 사진)');
+          toast('데모 데이터로 바꿨어요 (2주 기록 + 배지)');
         } else {
           const real = DemoBackup.load();
-          await clearDemoMedia();
           if (real) {
             App.setState(real);
             DemoBackup.clear();
@@ -3305,7 +3200,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
         clearTimeout(this.resetTimer);
         Store.clear();
         DemoBackup.clear();
-        MediaStore.clear();
         App.state = null;
         Clock.offset = 0;
         Overlay.clear();
@@ -3314,235 +3208,21 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     },
   };
 
-  /* =========================================================
-   * 25. 인증 사진·영상 (IndexedDB에 원본, 기록에는 작은 썸네일만)
-   * ========================================================= */
-  const MEDIA_MAX = 3;
-  const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
-  const MediaStore = {
-    db: null,
-    open() {
-      if (this.db) return Promise.resolve(this.db);
-      return new Promise((res, rej) => {
-        try {
-          const r = indexedDB.open('associate-quest-media', 1);
-          r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('media')) r.result.createObjectStore('media', { keyPath: 'id' }); };
-          r.onsuccess = () => { this.db = r.result; res(this.db); };
-          r.onerror = () => rej(r.error);
-          r.onblocked = () => rej(new Error('blocked'));
-        } catch (e) { rej(e); }
-      });
-    },
-    async tx(mode, fn) {
-      const db = await this.open();
-      return new Promise((res, rej) => {
-        const t = db.transaction('media', mode);
-        const out = fn(t.objectStore('media'));
-        t.oncomplete = () => res(out && 'result' in out ? out.result : undefined);
-        t.onerror = () => rej(t.error);
-        t.onabort = () => rej(t.error || new Error('abort'));
-      });
-    },
-    put(rec) { return this.tx('readwrite', (st) => st.put(rec)); },
-    get(id) { return this.tx('readonly', (st) => st.get(id)); },
-    del(id) { return this.tx('readwrite', (st) => st.delete(id)); },
-    clear() { return this.tx('readwrite', (st) => st.clear()).catch(() => {}); },
-  };
-
-  function canvasFrom(src, maxSide) {
-    const w0 = src.width || src.videoWidth, h0 = src.height || src.videoHeight;
-    const k = Math.min(1, maxSide / Math.max(w0, h0));
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(w0 * k)); c.height = Math.max(1, Math.round(h0 * k));
-    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
-    return c;
-  }
-  const canvasBlob = (c, q) => new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/jpeg', q));
-  async function decodeImage(file) {
-    if (window.createImageBitmap) { try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) { /* 아래 방식으로 재시도 */ } }
-    const url = URL.createObjectURL(file);
-    try {
-      const img = new Image();
-      img.decoding = 'async'; img.src = url;
-      await img.decode();
-      return img;
-    } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
-  }
-  function videoThumb(file) {
-    return new Promise((resolve) => {
-      const url = URL.createObjectURL(file);
-      const v = document.createElement('video');
-      let done = false;
-      const finish = (thumb, duration) => { if (done) return; done = true; URL.revokeObjectURL(url); v.removeAttribute('src'); resolve({ thumb, duration }); };
-      v.muted = true; v.playsInline = true; v.preload = 'auto';
-      v.onloadeddata = () => { try { v.currentTime = Math.min(0.5, (v.duration || 1) / 2); } catch (e) { finish(null, v.duration); } };
-      v.onseeked = () => { try { finish(canvasFrom(v, 320).toDataURL('image/jpeg', 0.65), v.duration); } catch (e) { finish(null, v.duration); } };
-      v.onerror = () => finish(null, null);
-      setTimeout(() => finish(null, Number.isFinite(v.duration) ? v.duration : null), 5000);
-      v.src = url;
-    });
-  }
-  // 파일 → 저장할 레코드 준비 (사진은 긴 변 1600px JPEG로 줄임)
-  async function prepareMedia(file) {
-    const type = file.type || '';
-    if (type.startsWith('image/')) {
-      let img;
-      try { img = await decodeImage(file); } catch (e) { throw new Error('이 사진 형식은 열 수 없어요. JPG나 PNG로 올려주세요.'); }
-      const big = canvasFrom(img, 1600);
-      const blob = await canvasBlob(big, 0.82);
-      const thumb = canvasFrom(img, 320).toDataURL('image/jpeg', 0.65);
-      img.close?.();
-      return { type: 'image', blob, mime: 'image/jpeg', thumb, name: file.name, size: blob.size, w: big.width, h: big.height };
-    }
-    if (type.startsWith('video/')) {
-      if (file.size > VIDEO_MAX_BYTES) throw new Error('영상은 50MB 이하만 올릴 수 있어요. 짧게 잘라서 올려주세요.');
-      const { thumb, duration } = await videoThumb(file);
-      return { type: 'video', blob: file, mime: type, thumb, name: file.name, size: file.size, duration };
-    }
-    throw new Error('사진이나 영상 파일만 올릴 수 있어요.');
-  }
-  const fmtDur = (s) => (Number.isFinite(s) && s > 0 ? `${Math.floor(s / 60)}:${pad2(Math.round(s % 60))}` : '');
-
-  function thumbsHTML(media, owner) {
-    if (!media || !media.length) return '';
-    return `<div class="thumbs">${media.map((m, i) => `<button type="button" class="thumb" data-media-owner="${esc(owner)}" data-media-idx="${i}" aria-label="인증 ${m.type === 'video' ? '영상' : '사진'} ${i + 1} 보기">
-      ${m.thumb ? `<img src="${m.thumb}" alt="">` : `<span class="thumb-ph" aria-hidden="true">${m.type === 'video' ? '🎬' : '🖼️'}</span>`}
-      ${m.type === 'video' ? `<span class="play" aria-hidden="true">▶</span>${m.duration ? `<span class="dur">${fmtDur(m.duration)}</span>` : ''}` : ''}
-    </button>`).join('')}</div>`;
-  }
-  // 썸네일 클릭 → 뷰어 (owner = questHistory uid)
-  function bindThumbs(root) {
-    root.querySelectorAll('[data-media-owner]').forEach((b) => b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const h = App.state.questHistory.find((x) => x.kind === 'quest' && x.uid === b.dataset.mediaOwner);
-      if (h?.media?.length) MediaViewer.open(h, Number(b.dataset.mediaIdx));
-    }));
-  }
-
-  const MediaViewer = {
-    async open(h, idx = 0) {
-      const el = document.createElement('section');
-      el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', '인증 사진·영상 보기');
-      Overlay.push(el, 'viewer');
-      let url = null;
-      const show = async (i) => {
-        if (url) { URL.revokeObjectURL(url); url = null; }
-        const m = h.media[i];
-        el.innerHTML = `<header class="viewer-head"><span>${esc(h.title)}</span><span class="viewer-count">${i + 1}/${h.media.length}</span>
-            <button type="button" class="icon-btn" data-x aria-label="닫기">${CLOSE_ICON}</button></header>
-          <div class="viewer-body">${thinking('불러오는 중')}</div>
-          ${h.media.length > 1 ? `<div class="viewer-nav"><button type="button" class="btn btn-secondary xs" data-nav="-1" ${i === 0 ? 'disabled' : ''}>이전</button><button type="button" class="btn btn-secondary xs" data-nav="1" ${i === h.media.length - 1 ? 'disabled' : ''}>다음</button></div>` : ''}
-          <p class="viewer-cap">${h.note ? `"${esc(h.note)}" · ` : ''}${fmtDay(h.date)}</p>`;
-        el.querySelector('[data-x]').addEventListener('click', () => Overlay.pop(el));
-        el.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => show(i + Number(b.dataset.nav))));
-        const body = el.querySelector('.viewer-body');
-        let rec = null;
-        try { rec = await MediaStore.get(m.id); } catch (e) { rec = null; }
-        if (!el.isConnected) return;
-        if (!rec || !rec.blob) {
-          body.innerHTML = `${m.thumb ? `<img class="viewer-media" src="${m.thumb}" alt="인증 ${m.type === 'video' ? '영상 썸네일' : '사진'}">` : ''}<p class="viewer-miss">이 브라우저에서 원본 파일을 찾을 수 없어요.<br>첨부한 기기·브라우저에서만 원본을 볼 수 있어요.</p>`;
-          return;
-        }
-        url = URL.createObjectURL(rec.blob);
-        body.innerHTML = m.type === 'video'
-          ? `<video class="viewer-media" src="${url}" controls playsinline autoplay muted></video>`
-          : `<img class="viewer-media" src="${url}" alt="인증 사진">`;
-        body.querySelector('video')?.addEventListener('error', () => { body.insertAdjacentHTML('beforeend', '<p class="viewer-miss">이 브라우저에서 재생할 수 없는 영상 형식이에요.</p>'); });
-      };
-      el.addEventListener('closed', () => { if (url) URL.revokeObjectURL(url); });
-      show(idx);
-    },
-  };
-
-  // 완료 시트 안의 첨부 영역
-  function mediaPicker(wrap, max = MEDIA_MAX, onChange = () => {}) {
-    const items = []; // { status: 'busy' | 'ready' | 'error', rec, key }
-    const box = $('#cm-media', wrap), input = $('#cm-file', wrap), err = $('#cm-media-err', wrap);
-    const draw = () => {
-      box.innerHTML = items.map((it, i) => `<div class="media-item ${it.status}">
-          ${it.status === 'busy' ? '<span class="thumb-ph"><span class="dots"><i></i><i></i><i></i></span></span>'
-            : it.rec.thumb ? `<img src="${it.rec.thumb}" alt="">` : `<span class="thumb-ph" aria-hidden="true">${it.rec.type === 'video' ? '🎬' : '🖼️'}</span>`}
-          ${it.status === 'ready' && it.rec.type === 'video' ? `<span class="play" aria-hidden="true">▶</span>${it.rec.duration ? `<span class="dur">${fmtDur(it.rec.duration)}</span>` : ''}` : ''}
-          ${it.status === 'ready' ? `<button type="button" class="media-x" data-rm="${i}" aria-label="첨부 ${i + 1} 빼기">${CLOSE_ICON}</button>` : ''}
-        </div>`).join('') + (items.length < max ? `<label class="media-add" for="cm-file"><span aria-hidden="true">＋</span>사진·영상</label>` : '');
-      onChange(items.filter((x) => x.status === 'ready').length);
-      box.querySelectorAll('[data-rm]').forEach((b) => b.addEventListener('click', () => { items.splice(Number(b.dataset.rm), 1); draw(); }));
-    };
-    input.addEventListener('change', async () => {
-      const files = [...input.files];
-      input.value = '';
-      err.textContent = '';
-      const room = max - items.length;
-      if (files.length > room) err.textContent = `인증 파일은 최대 ${max}개까지 첨부할 수 있어요.`;
-      const batch = files.slice(0, room).map((f) => ({ status: 'busy', file: f }));
-      items.push(...batch);
-      draw();
-      for (const it of batch) {
-        try { it.rec = await prepareMedia(it.file); it.status = 'ready'; }
-        catch (e) { items.splice(items.indexOf(it), 1); err.textContent = e.message || '파일을 처리하지 못했어요.'; }
-        draw();
-      }
-    });
-    draw();
-    return {
-      busy: () => items.some((x) => x.status === 'busy'),
-      // 저장 후 기록에 남길 참조 목록 반환
-      async save(uid) {
-        const refs = [];
-        let failed = 0;
-        for (const it of items.filter((x) => x.status === 'ready')) {
-          const id = `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-          try {
-            await MediaStore.put({ id, ownerUid: uid, blob: it.rec.blob, mime: it.rec.mime, type: it.rec.type, name: it.rec.name, size: it.rec.size, createdAt: nowISO() });
-            refs.push({ id, type: it.rec.type, thumb: it.rec.thumb || null, duration: it.rec.duration || null });
-          } catch (e) { failed += 1; }
-        }
-        return { refs, failed };
-      },
-    };
-  }
-
-  // 데모용 인증 이미지 (캔버스로 그린 예시)
-  async function seedDemoMedia(s) {
-    const picks = [['demo-7', '🍜', '다른 본부 동료와 점심'], ['demo-11', '👋', '다른 본부 구성원과 첫인사'], ['demo-15', '⚙️', '자동화할 업무 찾기']];
-    for (const [uid, emoji, caption] of picks) {
-      const h = s.questHistory.find((x) => x.uid === uid);
-      if (!h) continue;
-      const c = document.createElement('canvas'); c.width = 960; c.height = 720;
-      const g = c.getContext('2d');
-      const col = CATEGORIES[h.category].color;
-      const grad = g.createLinearGradient(0, 0, 960, 720); grad.addColorStop(0, col); grad.addColorStop(1, '#FFE9DA');
-      g.fillStyle = grad; g.fillRect(0, 0, 960, 720);
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.font = '240px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.fillText(emoji, 480, 320);
-      g.fillStyle = '#FFFFFF'; g.font = '56px Jua, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif'; g.fillText(caption, 480, 560);
-      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(24, 24, 190, 56); g.fillStyle = '#FFFFFF'; g.font = '30px sans-serif'; g.fillText('데모 이미지', 119, 53);
-      const blob = await canvasBlob(c, 0.82);
-      const id = `demo-media-${uid}`;
-      await MediaStore.put({ id, ownerUid: uid, blob, mime: 'image/jpeg', type: 'image', name: `${uid}.jpg`, size: blob.size, createdAt: nowISO() });
-      h.media = [{ id, type: 'image', thumb: canvasFrom(c, 320).toDataURL('image/jpeg', 0.65), duration: null }];
-    }
-  }
-
   const DemoBackup = {
     key: `${STORAGE_KEY}:real`,
     save(state) { try { localStorage.setItem(this.key, JSON.stringify(state)); return true; } catch (e) { return false; } },
     load() { try { const raw = localStorage.getItem(this.key); return raw ? migrate(JSON.parse(raw)) : null; } catch (e) { return null; } },
     clear() { try { localStorage.removeItem(this.key); } catch (e) { /* 무시 */ } },
   };
-  async function clearDemoMedia() {
-    try {
-      const keys = await MediaStore.tx('readonly', (st) => st.getAllKeys());
-      for (const k of keys || []) if (String(k).startsWith('demo-media-')) await MediaStore.del(k);
-    } catch (e) { /* 저장 공간을 못 열면 건너뜀 */ }
-  }
-
   /* 다음 단계에서 콘솔/다른 모듈이 접근할 수 있도록 노출 */
   window.AssociateQuest = {
     App, Store, Onboarding, Main, Detail, Report, Engine, AI, AIQuest, Progress, Clock, Badges, STEP,
     constants: { DIVISIONS, INTEREST_GROUPS, NETWORKING_STYLES, DAILY_GOALS, XP_PER_LEVEL, QUESTS, CATEGORIES, TARGETS, BADGES },
     helpers: { createInitialState, migrate, normalizeProfile, levelInfo, levelOf, titleOf, tenureMonth, mascotSVG, weekSummary, localOpeners, buildDemoState },
   };
+
+  // 인증 사진·영상 기능을 없애면서 예전에 저장된 파일 정리
+  try { indexedDB.deleteDatabase('associate-quest-media'); } catch (e) { /* 저장 공간을 못 열면 건너뜀 */ }
 
   App.init();
 })();

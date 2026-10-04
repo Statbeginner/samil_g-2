@@ -532,11 +532,6 @@ button { cursor: pointer; }
 .lv-text { flex: 1; min-width: 0; }
 .lv-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 18px; }
 .progress.lg { height: 14px; flex: none; }
-.stage-track { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.stage { display: flex; flex-direction: column; align-items: center; padding: 8px 2px; border-radius: 12px; background: var(--surface-2); color: var(--fg-muted); font-size: 12px; text-align: center; }
-.stage b { font-family: var(--font-display); font-weight: 400; font-size: 13px; }
-.stage.on { background: var(--brand-soft); color: var(--brand); }
-.stage.cur { box-shadow: inset 0 0 0 2px var(--brand); }
 
 /* 오버레이 · 시트 */
 #overlay-root { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
@@ -629,6 +624,18 @@ select.text-input { appearance: auto; }
 .ch-day { fill: var(--fg-muted); font-size: 12px; font-family: var(--font-body); }
 .ch-day.today { fill: var(--brand); }
 .filter-row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; margin: 0 -2px; scrollbar-width: none; }
+.cat-swiper { display: flex; align-items: center; gap: 6px; }
+.cs-track { flex: 1; min-width: 0; margin: 0; padding: 4px 4px 8px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+.cs-track::-webkit-scrollbar { display: none; }
+.cs-track .tag { flex: none; scroll-snap-align: center; white-space: nowrap; }
+.cs-track .tag.is-zero { opacity: .55; }
+.cs-track .tag[aria-pressed="true"] { opacity: 1; }
+.cs-n { font-variant-numeric: tabular-nums; font-size: 12.5px; opacity: .75; }
+.cs-arrow { flex: none; width: 32px; height: 32px; margin-bottom: 4px; border-radius: 50%; border: 1px solid var(--line, rgba(0,0,0,.12)); background: var(--surface, #fff);
+  color: var(--fg, inherit); font-size: 20px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
+.cs-arrow:disabled { opacity: .3; cursor: default; }
 .filter-row .tag { flex: none; }
 .filter-row .tag[aria-pressed="true"] { transform: none; }
 .hist-day { display: flex; flex-direction: column; gap: 8px; }
@@ -780,12 +787,6 @@ select.text-input { appearance: auto; }
 .switch.sm[aria-checked="true"] span { transform: translateX(18px); }
 .full-inner .btn-text { margin-top: -6px; }
 
-/* 새 배지: 탭바 빨간 점 · NEW 표시 */
-.tab .ti { position: relative; }
-.tab.has-new .ti::after { content: ""; position: absolute; top: -3px; right: -7px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); border: 2px solid var(--bg); }
-.badge-tile { position: relative; }
-.new-tag { position: absolute; top: 6px; right: 6px; padding: 0 6px; border-radius: 999px; background: var(--danger); color: #FFFFFF; font-family: var(--font-display); font-size: 11px; line-height: 18px; }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .countdown.run i { animation-duration: var(--dur, 3s) !important; }
@@ -876,10 +877,10 @@ select.text-input { appearance: auto; }
     { id: 'axnode',     label: 'AX Node',  desc: 'AI 전환 · 데이터 · 디지털 혁신', teamExample: 'AX 전략팀',   icon: 'ax' },
     { id: 'other',      label: '기타',     desc: '지원 조직 등 그 밖의 소속', teamExample: '인사팀',       icon: 'other' },
   ];
-  // Associate_Quest_Missions_100.xlsx 카테고리 10개 (표시 이름 · 엑셀 괄호 안 설명)
+  // 퀘스트 목록 - 통합질문서.csv 카테고리 10개 (표시 이름 · 엑셀 괄호 안 설명)
   const INTEREST_GROUPS = [
     { id: 'work', label: '업무', items: [['커리어', '진로'], ['스터디', '회계산업 이슈·AI·택스 개정'], ['업무 피드백', ''], ['성장', '업무 관련·무관'], ['업무용어', '']] },
-    { id: 'life', label: '일상', items: [['맛집', '점심·식사'], ['취미·동호회', '등산·러닝·합창'], ['체력·스트레스', ''], ['스몰토크', '네트워킹'], ['조직행사', '타운홀 미팅·동기 모임']] },
+    { id: 'life', label: '일상', items: [['맛집', '점심·식사'], ['취미·동호회', '취미활동·사내동호회'], ['체력·스트레스', '체력·스트레스 관리'], ['스몰토크', '네트워킹'], ['조직행사', '조직행사 참여']] },
   ];
   const INTEREST_LABELS = INTEREST_GROUPS.flatMap((g) => g.items.map(([l]) => l));
   const CUSTOM_INTEREST_MAX = 8;
@@ -1047,19 +1048,19 @@ select.text-input { appearance: auto; }
   const narrow = (list, fn) => { const f = list.filter(fn); return f.length ? f : list; };
 
   /* =========================================================
-   * 11. 퀘스트 카탈로그 (Associate_Quest_Missions_100.xlsx 기반)
-   *     엑셀 카테고리 10개 × 미션 100개. 엑셀에 있는 미션만 퀘스트로 제공
+   * 11. 퀘스트 카탈로그 (퀘스트 목록 - 통합질문서.csv 기반)
+   *     카테고리 10개 × 미션 100개. 목록에 있는 미션만 퀘스트로 제공
    * ========================================================= */
   const CATEGORIES = {
     // label = 앱 표시 이름, detail = 엑셀 카테고리 괄호 안 설명, ask = 첫마디 도우미의 연락 목적
     career:    { label: '커리어',       detail: '진로',                      emoji: '🧭', color: '#7C5CD6', work: true, ask: '커리어 이야기를 여쭤보고 싶어서' },
     food:      { label: '맛집',         detail: '점심·식사',                  emoji: '🍜', color: '#E2582B', ask: '점심 같이 하면서 이야기 나눠보고 싶어서' },
     study:     { label: '스터디',       detail: '회계산업 이슈·AI·택스 개정',   emoji: '📚', color: '#2F7FD0', work: true, ask: '요즘 업계 이슈에 대해 여쭤보고 싶어서' },
-    hobby:     { label: '취미·동호회',  detail: '등산·러닝·합창',             emoji: '🎵', color: '#C2449A', ask: '취미 이야기를 나눠보고 싶어서' },
+    hobby:     { label: '취미·동호회',  detail: '취미활동·사내동호회',         emoji: '🎵', color: '#C2449A', ask: '취미 이야기를 나눠보고 싶어서' },
     feedback:  { label: '업무 피드백',  detail: '',                         emoji: '📝', color: '#1E8E7E', work: true, ask: '제 업무에 대한 의견을 여쭤보고 싶어서' },
-    health:    { label: '체력·스트레스', detail: '',                         emoji: '💪', color: '#3E9B3A', ask: '같이 잠깐 걸으면서 쉬어가면 좋을 것 같아서' },
+    health:    { label: '체력·스트레스', detail: '체력·스트레스 관리',          emoji: '💪', color: '#3E9B3A', ask: '같이 잠깐 걸으면서 쉬어가면 좋을 것 같아서' },
     smalltalk: { label: '스몰토크',     detail: '네트워킹',                   emoji: '💬', color: '#D98A0B', ask: '인사드리고 이야기 나눠보고 싶어서' },
-    event:     { label: '조직행사',     detail: '타운홀 미팅·동기 모임',        emoji: '🎤', color: '#D2414F', ask: '행사 이야기를 나눠보고 싶어서' },
+    event:     { label: '조직행사',     detail: '조직행사 참여',               emoji: '🎤', color: '#D2414F', ask: '행사 이야기를 나눠보고 싶어서' },
     growth:    { label: '성장',         detail: '업무 관련·무관',              emoji: '🌱', color: '#5E8F1F', work: true, ask: '배운 점을 나눠보고 싶어서' },
     terms:     { label: '업무용어',     detail: '',                         emoji: '🔤', color: '#3B5BA9', work: true, ask: '업무 용어를 하나 여쭤보고 싶어서' },
   };
@@ -1090,30 +1091,30 @@ select.text-input { appearance: auto; }
 
   // 받침 있으면 '과', 없으면 '와'
   const josaWa = (word) => { const c = String(word).trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; };
-  // [ID, 카테고리, 단계(대상), 미션(엑셀 원문), 예상 분, 함께 여부, 세부 구분] — Associate_Quest_Missions_100.xlsx
-  //   대상·시간·함께 여부는 엑셀에 없어서 미션 문장에서 추정 (선배→선배, 동기→동기, 동료→팀 동료, 다른 본부·처음 만난 분→타본부, 사람 없음→혼자)
+  // [ID, 카테고리, 단계(대상), 미션(원문), 예상 분, 함께 여부, 세부 구분] — 퀘스트 목록 - 통합질문서.csv
+  //   목록에 그대로 남은 미션은 기존 ID 유지(진행 기록·배지 보존), 새 미션은 Q101부터 번호 부여
+  //   대상·시간·함께 여부는 목록에 없어서 미션 문장에서 추정 (선배→선배, 동기→동기, 동료→팀 동료, 다른 본부·처음 만난 분→타본부, 사람 없음→혼자)
   const QUEST_ROWS = [
     ["Q001", "career", 3, "선배에게 연차별로 어떤 커리어 선택지가 있는지 물어보세요.", 15, true, ""],
-    ["Q002", "career", 4, "다른 본부로 옮기거나 이직한 선배를 찾아 그 이유를 들어보세요.", 20, true, ""],
-    ["Q003", "career", 1, "1년 뒤 되고 싶은 모습을 한 줄로 적어보세요.", 5, false, ""],
     ["Q004", "career", 4, "다른 본부 동료에게 그 본부 일 중 가장 궁금한 것을 물어보세요.", 20, true, ""],
-    ["Q005", "career", 1, "사내에 소개된 선배 인터뷰나 칼럼 한 편을 읽어보세요.", 10, false, ""],
-    ["Q006", "career", 1, "관심 있는 자격증·교육 일정을 하나 캘린더에 등록해보세요.", 5, false, ""],
     ["Q007", "career", 1, "동기와 서로 관심 있는 커리어 방향을 이야기해보세요.", 10, true, ""],
     ["Q008", "career", 3, "선배에게 지금 단계에서 가장 쌓아야 할 역량이 무엇인지 물어보세요.", 15, true, ""],
     ["Q009", "career", 3, "이번 분기 목표를 한 가지 정해 선배에게 공유해보세요.", 15, true, ""],
     ["Q010", "career", 4, "관심 있는 직무를 하는 분께 15분 대화를 요청해보세요.", 15, true, ""],
-    ["Q011", "food", 2, "오늘 점심을 평소 함께 먹지 않던 팀 동료와 먹어보세요.", 60, true, ""],
-    ["Q012", "food", 2, "동료에게 회사 주변 최애 맛집 하나를 추천받으세요.", 10, true, ""],
-    ["Q013", "food", 1, "동기에게 이번 주 점심을 같이 먹자고 먼저 제안해보세요.", 10, true, ""],
+    ["Q101", "career", 3, "시니어나 매니저가 되면서 가장 크게 달라진 점은 뭐였는지 선배에게 질문해보세요", 15, true, ""],
+    ["Q102", "career", 1, "지난 1년 동안의 업무경험과 키운 역량을 정리해보세요.", 10, false, ""],
+    ["Q103", "career", 2, "우리 팀에서 '이 사람처럼 일하고 싶다' 싶은 롤모델이 있는지 팀 동료에게 질문해보세요.", 10, true, ""],
+    ["Q104", "career", 3, "선배에게 커리어에서 가장 고민됐던 갈림길과, 그때 결정 기준은 뭐였는지 질문해보세요.", 15, true, ""],
     ["Q014", "food", 4, "다른 본부 동료와 점심 한 끼를 함께해보세요.", 60, true, ""],
-    ["Q015", "food", 2, "추천받은 맛집에 가보고 후기를 추천해준 동료에게 알려주세요.", 10, true, ""],
-    ["Q016", "food", 2, "팀원들과 점심 메뉴를 함께 정해보세요.", 10, true, ""],
-    ["Q017", "food", 1, "회사 근처 처음 가보는 식당에 도전해보세요.", 60, false, ""],
     ["Q018", "food", 3, "선배에게 신입 때 자주 가던 점심 맛집을 물어보세요.", 15, true, ""],
     ["Q019", "food", 2, "점심 후 동료와 카페에서 10분만 더 이야기해보세요.", 10, true, ""],
-    ["Q020", "food", 1, "동기들과 이번 달 점심 모임 날짜를 정해보세요.", 10, true, ""],
-    ["Q021", "study", 1, "이번 달 세법 개정안 중 관심 가는 항목 하나를 두 줄로 요약해보세요.", 5, false, ""],
+    ["Q106", "food", 3, "선배에게 질문하세요: 이 근처에서 '여긴 꼭 가봐야 한다' 하는 점심 맛집 있어요?", 15, true, ""],
+    ["Q107", "food", 2, "팀동료에게 질문하세요: 바쁜 날 빨리 먹고 들어올 수 있는 곳 추천해 주실 수 있어요?", 10, true, ""],
+    ["Q108", "food", 1, "동기와 함께 처음 가보는 맛집을 시도해보세요.", 60, true, ""],
+    ["Q109", "food", 3, "선배에게 질문하세요: 팀 회식 장소로 반응이 제일 좋았던 곳은 어디였어요?", 15, true, ""],
+    ["Q110", "food", 3, "선배와 함께 선배가 제일 좋아하는 카페에서 커피를 사보세요.", 20, true, ""],
+    ["Q111", "food", 2, "혼밥하기 편한 곳에 대해 질문하세요.", 10, true, ""],
+    ["Q112", "food", 2, "요즘 먹어본 것 중에 제일 맛있었던 메뉴가 무엇인지 질문하세요.", 10, true, ""],
     ["Q022", "study", 1, "업무에 써본 AI 활용법 하나를 선배나 동기에게 물어보세요.", 10, true, ""],
     ["Q023", "study", 2, "오늘 회계·감사 업계 뉴스 하나를 읽고 동료에게 공유해보세요.", 10, true, ""],
     ["Q024", "study", 1, "AI로 반복 업무 하나를 줄여보고 방법을 메모해보세요.", 5, false, ""],
@@ -1122,27 +1123,28 @@ select.text-input { appearance: auto; }
     ["Q027", "study", 1, "사내 스터디나 세미나 일정을 찾아 하나 신청해보세요.", 5, false, ""],
     ["Q028", "study", 1, "업무와 관련 있는 AI 도구 하나를 골라 10분간 써보세요.", 10, false, ""],
     ["Q029", "study", 3, "선배에게 요즘 가장 중요하게 보는 업계 이슈를 물어보세요.", 15, true, ""],
-    ["Q030", "study", 2, "오늘 배운 내용을 한 문장으로 정리해 팀 채널에 공유해보세요.", 10, true, ""],
-    ["Q031", "hobby", 1, "사내 동호회 목록을 확인하고 관심 가는 곳을 한 군데 골라보세요.", 5, false, ""],
-    ["Q032", "hobby", 2, "동호회 활동 중인 동료에게 어떤 점이 좋은지 물어보세요.", 10, true, ""],
-    ["Q033", "hobby", 1, "다음 동호회 모임 일정을 확인하고 참석 의사를 남겨보세요.", 5, false, ""],
-    ["Q034", "hobby", 2, "등산·러닝·합창 중 하나를 골라 동료에게 함께 해보자고 제안해보세요.", 10, true, ""],
-    ["Q035", "hobby", 4, "관심 있는 동호회 모임에 한 번 참석해보세요.", 60, true, ""],
-    ["Q036", "hobby", 2, "내 취미를 동료에게 한 문장으로 소개해보세요.", 10, true, ""],
-    ["Q037", "hobby", 2, "동료의 취미 이야기를 듣고 먼저 질문을 던져보세요.", 10, true, ""],
-    ["Q038", "hobby", 1, "쉬는 날 해보고 싶은 활동 하나를 정해 캘린더에 넣어보세요.", 5, false, ""],
-    ["Q039", "hobby", 1, "동호회 활동 후기를 한 줄로 남겨보세요.", 5, false, ""],
-    ["Q040", "hobby", 4, "나와 다른 취미를 가진 다른 본부 동료와 이야기해보세요.", 20, true, ""],
+    ["Q128", "study", 2, "업무에 AI 툴 써보신 적 있는지 동료에게 물어보세요.", 10, true, ""],
+    ["Q129", "study", 1, "같이 AI나 세법 등 스터디를 같이 할지 동기에게 물어보세요.", 10, true, ""],
+    ["Q133", "hobby", 2, "동료에게 요즘 즐겨 듣는 음악 한 곡을 추천받아 오늘 한 번 들어보세요.", 10, true, ""],
+    ["Q134", "hobby", 1, "오늘 하루 가장 마음에 들었던 순간을 사진 한 장으로 남겨보세요.", 5, false, ""],
+    ["Q135", "hobby", 2, "동료에게 요즘 퇴근 후 가장 즐겨 하는 활동이 무엇인지 물어보세요.", 10, true, ""],
+    ["Q136", "hobby", 1, "관심 있는 동호회의 활동 후기나 사진을 찾아보고 가장 해보고 싶은 활동을 골라보세요.", 10, false, ""],
+    ["Q137", "hobby", 2, "동료에게 회사 근처에서 함께하기 좋은 취미 활동 하나를 추천받아보세요.", 10, true, ""],
+    ["Q138", "hobby", 1, "이번 달 사내에서 진행되는 취미·문화 관련 활동 하나를 확인해보세요.", 5, false, ""],
+    ["Q139", "hobby", 2, "동료에게 업무가 끝난 후 스트레스를 풀 때 주로 하는 활동을 추천받아보세요.", 10, true, ""],
+    ["Q140", "hobby", 2, "나와 취미가 비슷한 동료를 찾아 서로 그 취미를 좋아하게 된 계기를 이야기해보세요.", 15, true, ""],
+    ["Q141", "hobby", 2, "사내 동호회나 취미 활동에 관한 재미있는 에피소드를 동료에게 하나 공유해보세요.", 10, true, ""],
+    ["Q142", "hobby", 1, "이번 주에 해보고 싶은 새로운 취미 활동 하나를 정하고 일정을 잡아보세요.", 5, false, ""],
     ["Q041", "feedback", 3, "오늘 마친 업무 하나에 대해 선배에게 개선할 점을 물어보세요.", 15, true, ""],
     ["Q042", "feedback", 1, "받은 피드백 중 적용할 점 한 가지를 메모해보세요.", 5, false, ""],
-    ["Q043", "feedback", 3, "이번 주 가장 잘한 일 한 가지를 선배에게 공유하고 의견을 들어보세요.", 15, true, ""],
     ["Q044", "feedback", 1, "동기에게 내 업무 방식에 대한 의견을 부탁해보세요.", 10, true, ""],
     ["Q045", "feedback", 3, "지난 피드백 중 반영한 내용을 선배에게 알려주세요.", 15, true, ""],
     ["Q046", "feedback", 3, "피드백 받고 싶은 업무를 정해 요청 메시지를 보내보세요.", 15, true, ""],
     ["Q047", "feedback", 1, "동기의 업무 중 좋았던 점 한 가지를 칭찬해보세요.", 10, true, ""],
-    ["Q048", "feedback", 3, "업무를 마무리할 때 빠진 부분이 없는지 확인을 요청해보세요.", 15, true, ""],
     ["Q049", "feedback", 3, "피드백을 준 분께 감사 인사를 한 줄로 전해보세요.", 15, true, ""],
     ["Q050", "feedback", 1, "최근 한 달간 받은 피드백을 모아 반복되는 주제를 찾아보세요.", 5, false, ""],
+    ["Q130", "feedback", 3, "지난번 제 작업에서 다음엔 다르게 했으면 하는 점을 하나만 선배에게 질문해보세요.", 15, true, ""],
+    ["Q131", "feedback", 3, "조서 작성할 때 자주 놓치는 부분이 있는지 선배에게 질문해보세요.", 15, true, ""],
     ["Q051", "health", 2, "점심 후 10분간 동료와 산책해보세요.", 10, true, ""],
     ["Q052", "health", 2, "동료에게 스트레스 해소법을 물어보고 하나 따라 해보세요.", 10, true, ""],
     ["Q053", "health", 1, "자리에서 일어나 스트레칭을 3분간 해보세요.", 3, false, ""],
@@ -1150,39 +1152,39 @@ select.text-input { appearance: auto; }
     ["Q055", "health", 1, "1분간 눈을 감고 쉬며 물 한 컵을 마셔보세요.", 1, false, ""],
     ["Q056", "health", 1, "오늘 힘들었던 일과 잘 넘긴 일을 한 줄씩 적어보세요.", 5, false, ""],
     ["Q057", "health", 2, "동료와 계단 오르기나 가벼운 운동을 함께해보세요.", 30, true, ""],
-    ["Q058", "health", 1, "잠들기 전 화면을 끄고 10분간 쉬어보세요.", 10, false, ""],
     ["Q059", "health", 1, "이번 주 스트레스 관리 목표를 정해 동기와 서로 응원해보세요.", 10, true, ""],
     ["Q060", "health", 2, "동료와 함께 운동 일정을 하나 잡아보세요.", 10, true, ""],
-    ["Q061", "smalltalk", 4, "다른 본부 구성원에게 먼저 인사해보세요.", 20, true, ""],
+    ["Q105", "health", 3, "선배에게 바쁜 시즌을 버티는 본인만의 노하우가 있는지 질문해보세요.", 15, true, ""],
     ["Q062", "smalltalk", 4, "다른 본부 동료와 5분간 Coffee Chat을 해보세요.", 5, true, ""],
-    ["Q063", "smalltalk", 4, "처음 이야기해보는 동료에게 요즘 가장 재미있었던 일을 물어보세요.", 20, true, ""],
-    ["Q064", "smalltalk", 4, "엘리베이터나 휴게 공간에서 마주친 분께 가볍게 인사해보세요.", 20, true, ""],
     ["Q065", "smalltalk", 2, "동료에게 이번 주말 계획을 물어보세요.", 10, true, ""],
-    ["Q066", "smalltalk", 4, "처음 만난 분의 이름과 소속을 물어보고 기억해보세요.", 20, true, ""],
     ["Q067", "smalltalk", 2, "동료에게 최근 본 영화나 드라마를 추천받으세요.", 10, true, ""],
     ["Q068", "smalltalk", 3, "선배에게 출근길 루틴을 물어보세요.", 15, true, ""],
-    ["Q069", "smalltalk", 1, "다른 팀 동기에게 요즘 근황을 먼저 메시지로 물어보세요.", 10, true, ""],
-    ["Q070", "smalltalk", 4, "처음 이야기해보는 동료와 공통점 세 가지를 찾아보세요.", 20, true, ""],
-    ["Q071", "event", 2, "타운홀 미팅에서 가장 인상 깊었던 내용 하나를 동료와 이야기해보세요.", 10, true, ""],
-    ["Q072", "event", 1, "동기 모임 일정을 제안하거나 장소 후보를 하나 올려보세요.", 10, true, ""],
-    ["Q073", "event", 1, "다음 조직행사 일정을 확인하고 캘린더에 등록해보세요.", 5, false, ""],
-    ["Q074", "event", 4, "행사나 교육 자리에서 처음 보는 분께 먼저 인사해보세요.", 20, true, ""],
-    ["Q075", "event", 1, "타운홀 미팅에서 궁금했던 점을 질문 한 줄로 정리해보세요.", 5, false, ""],
-    ["Q076", "event", 1, "행사에 참여한 뒤 느낀 점을 한 줄로 남겨보세요.", 5, false, ""],
-    ["Q077", "event", 1, "동기 모임에서 아직 이야기해보지 않은 동기와 대화해보세요.", 10, true, ""],
-    ["Q078", "event", 1, "행사 준비나 진행을 돕는 일에 손을 들어보세요.", 5, false, ""],
-    ["Q079", "event", 2, "사내 공지에서 새로 알게 된 내용 하나를 동료에게 공유해보세요.", 10, true, ""],
-    ["Q080", "event", 1, "동기들과 다음 행사에 함께 참석하자고 약속해보세요.", 10, true, ""],
-    ["Q081", "growth", 1, "이번 주 처음 해본 업무를 정리하고 배운 점을 적어보세요.", 5, false, "업무 관련"],
-    ["Q082", "growth", 1, "내 업무에서 자동화할 수 있는 부분을 하나 찾아보세요.", 5, false, "업무 관련"],
-    ["Q083", "growth", 1, "업무와 상관없이 이번 달 배워보고 싶은 것을 하나 정해보세요.", 5, false, "업무 무관"],
-    ["Q084", "growth", 1, "선배의 업무 방식 중 배우고 싶은 점 하나를 메모해보세요.", 5, false, "업무 관련"],
-    ["Q085", "growth", 1, "자주 쓰는 업무 체크리스트를 하나 만들어보세요.", 5, false, "업무 관련"],
-    ["Q086", "growth", 1, "업무 외 책이나 강의의 첫 10분을 들어보세요.", 10, false, "업무 무관"],
-    ["Q087", "growth", 1, "오늘 하루 새로운 시도를 하나 해보세요. 예: 다른 길로 출근하기", 5, false, "업무 무관"],
-    ["Q088", "growth", 1, "이번 달 성장한 점 세 가지를 적어보세요.", 5, false, "업무 관련"],
+    ["Q113", "smalltalk", 4, "타본부 구성원에게 질문하세요: 어느 본부에 계세요? 요즘은 어떤 일 하세요?", 10, true, ""],
+    ["Q114", "smalltalk", 2, "팀 동료와 주말을 어떻게 보냈는지에 대해 대화해보세요.", 10, true, ""],
+    ["Q115", "smalltalk", 3, "선배에게 드라마나 콘텐츠를 추천받아 보세요.", 10, true, ""],
+    ["Q116", "smalltalk", 4, "타본부 구성원에게 질문하세요: 출퇴근길은 괜찮으세요? 요즘 지하철 많이 붐비죠?", 5, true, ""],
+    ["Q117", "smalltalk", 1, "동기에게 최근에 있었던 재미있는 일을 공유해보세요.", 5, true, ""],
+    ["Q118", "smalltalk", 4, "타본부 구성원에게 해당 본부의 분위기에 대해 질문하세요.", 15, true, ""],
+    ["Q143", "event", 1, "이번 달 참여해보고 싶은 조직행사 하나를 캘린더에 표시해보세요.", 5, false, ""],
+    ["Q144", "event", 1, "최근 참여했던 사내 행사가 회사생활에 어떤 도움이 되었는지 한 문장으로 정리해보세요.", 5, false, ""],
+    ["Q145", "event", 1, "최근 진행된 사내 행사 중 궁금했던 행사의 내용을 찾아보세요.", 10, false, ""],
+    ["Q146", "event", 4, "최근 참여한 조직행사에서 새롭게 알게 된 사람과 연락해보세요.", 10, true, ""],
+    ["Q147", "event", 4, "다른 본부 구성원에게 최근 참여했던 사내 행사가 있었는지 질문해보세요.", 15, true, ""],
+    ["Q148", "event", 2, "동료에게 아직 참여해보지 않은 사내 행사 하나를 추천받아보세요.", 10, true, ""],
+    ["Q149", "event", 2, "동료에게 참여해보고 싶은 사내 행사나 프로그램과 그 이유를 물어보세요.", 10, true, ""],
+    ["Q150", "event", 1, "이번 달 조직행사 중 평소라면 지나쳤을 행사 하나를 골라 어떤 행사인지 알아보세요.", 10, false, ""],
+    ["Q151", "event", 4, "사내 행사에서 만난 사람에게 행사에서 가장 재미있었던 부분을 물어보세요.", 15, true, ""],
+    ["Q152", "event", 1, "다가오는 조직행사 중 다른 본부의 업무나 문화를 알아볼 수 있는 행사 하나를 찾아보세요.", 10, false, ""],
     ["Q089", "growth", 1, "배운 업무 노하우를 동기에게 5분간 공유해보세요.", 5, true, "업무 관련"],
-    ["Q090", "growth", 1, "관심 가는 클래스나 체험을 하나 찾아 신청해보세요.", 5, false, "업무 무관"],
+    ["Q119", "growth", 3, "선배에게 엑셀이나 데이터 툴 중에 지금 익혀두면 좋은 기능을 질문하세요.", 15, true, "업무 관련"],
+    ["Q120", "growth", 3, "선배에게 1년차 때 가장 빨리 키워야 할 역량을 추천받으세요.", 15, true, "업무 관련"],
+    ["Q121", "growth", 2, "팀 동료에게 업무 효율을 높이는 본인만의 단축키나 템플릿을 질문하세요.", 10, true, "업무 관련"],
+    ["Q122", "growth", 4, "타본부 구성원에게 질문하세요: 그 본부 업무를 이해하려면 뭐부터 공부하면 될까요?", 15, true, "업무 관련"],
+    ["Q123", "growth", 3, "선배에게 질문하세요: 업무와 상관없이 이번 달 배워보고 싶은 것이 있으신가요?", 10, true, "업무 무관"],
+    ["Q124", "growth", 1, "동기에게 요즘 업무 말고 새로 배우고 있는 것이 있는지 질문하세요.", 10, true, "업무 무관"],
+    ["Q125", "growth", 4, "타본부 구성원과 일 외적으로 꾸준히 하시는 자기계발이 있는지에 대해 공유하세요.", 15, true, "업무 무관"],
+    ["Q126", "growth", 1, "동기와 올해 안에 꼭 해보고 싶은 거 하나씩 공유하세요.", 10, true, "업무 무관"],
+    ["Q127", "growth", 3, "선배에게 질문하세요: 회사 다니면서 시작해서 좋았던 습관이 있으세요?", 10, true, "업무 무관"],
     ["Q091", "terms", 3, "오늘 처음 들은 업무 용어 하나를 선배에게 물어보고 정리해보세요.", 15, true, ""],
     ["Q092", "terms", 1, "자주 헷갈리는 용어 하나를 나만의 한 줄 설명으로 적어보세요.", 5, false, ""],
     ["Q093", "terms", 1, "동기와 서로 모르는 용어를 하나씩 물어보고 알려주세요.", 10, true, ""],
@@ -1190,9 +1192,9 @@ select.text-input { appearance: auto; }
     ["Q095", "terms", 1, "회의에서 나온 낯선 용어를 메모해 회의 후 확인해보세요.", 5, false, ""],
     ["Q096", "terms", 1, "개인 용어 노트에 오늘의 용어 하나를 추가해보세요.", 5, false, ""],
     ["Q097", "terms", 3, "선배에게 신입이 꼭 알아야 할 용어 3개를 추천받으세요.", 15, true, ""],
-    ["Q098", "terms", 1, "영어 업무 용어 하나를 한국어로 풀어 설명해보세요.", 5, false, ""],
     ["Q099", "terms", 1, "업무 메일에서 모르는 표현 하나를 찾아 뜻을 확인해보세요.", 5, false, ""],
     ["Q100", "terms", 1, "용어 퀴즈를 하나 만들어 동기에게 내보세요.", 10, true, ""],
+    ["Q132", "terms", 4, "다른 본부에서는 자주 쓰는데 내 본부 사람들은 잘 모르는 용어가 있는지 다른 본부 사람에게 질문해보세요.", 15, true, ""],
   ];
   const STAGE_TIPS = {
     1: '메신저로 가볍게 먼저 말을 걸어봐요. 답이 오면 내 이야기도 하나 덧붙이면 대화가 이어져요.',
@@ -1694,11 +1696,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     })),
   ];
   const BADGE_MAP = Object.fromEntries(BADGES.map((b) => [b.id, b]));
-  const badgeTitle = (b) => `${b.emoji} ${b.name}`;
   const Badges = {
-    // 아직 기록 탭에서 보지 않은 새 배지 (탭바 빨간 점)
-    unseen(s) { return (Array.isArray(s.badges?.earned) ? s.badges.earned : []).filter((e) => e.seen === false); },
-    markSeen(s) { let n = 0; (s.badges?.earned || []).forEach((e) => { if (e.seen === false) { e.seen = true; n++; } }); return n; },
     earnedIds(s) { return new Set((Array.isArray(s.badges?.earned) ? s.badges.earned : []).map((e) => e.id)); },
     // 카테고리별로 완료한 서로 다른 미션 (먼저 완료한 순서로 최대 4칸) { 1: {id, title} | null, ... }
     stages(s, cat) {
@@ -1723,7 +1721,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       BADGES.forEach((b) => {
         if (have.has(b.id)) return;
         const p = this.progress(s, b);
-        if (p.done >= p.total) { s.badges.earned.push({ id: b.id, earnedAt: nowISO(), date: Clock.today(), seen: false }); fresh.push(b); }
+        if (p.done >= p.total) { s.badges.earned.push({ id: b.id, earnedAt: nowISO(), date: Clock.today() }); fresh.push(b); }
       });
       return fresh;
     },
@@ -2393,6 +2391,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
   const Main = {
     tab: 'home',
     histFilter: 'all',
+    histScroll: 0,
     req: { text: '', loading: false, result: null },
     bound: false,
 
@@ -2437,18 +2436,10 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       if (!App.state) return;
       StatusBar.render();
       document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === this.tab)));
-      this.updateBadgeDot();
       const el = $('#main-scroll');
       ({ home: HomeTab, records: RecordsTab, settings: SettingsTab })[this.tab].render(el);
     },
     refresh() { this.render(); Detail.rerender(); },
-    updateBadgeDot() {
-      const n = App.state ? Badges.unseen(App.state).length : 0;
-      const tab = document.querySelector('.tab[data-tab="records"]');
-      if (!tab) return;
-      tab.classList.toggle('has-new', n > 0);
-      tab.setAttribute('aria-label', n ? `기록, 새 배지 ${n}개` : '기록');
-    },
     maybeAutoReport() {
       const s = App.state, now = Clock.now(), d = now.getDay();
       const after = (d === 5 && now.getHours() >= 15) || d === 6 || d === 0;
@@ -2549,7 +2540,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     render(el) {
       const s = App.state, dq = s.dailyQuests;
       const done = dq.items.filter((i) => i.status === 'done').length;
-      const lv = levelInfo(s.stats.totalXP), level = lv.level, st = Engine.stage(s), next = Engine.nextUnlock(s);
+      const lv = levelInfo(s.stats.totalXP), level = lv.level, next = Engine.nextUnlock(s);
       el.innerHTML = `
         <div class="talk home-talk">${mascot('sm')}<p class="bubble">${esc(Greeting.text(s))}</p></div>
 
@@ -2580,9 +2571,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <span class="sec-sub tabnum">${s.stats.totalXP} XP</span>
           </div>
           <div class="progress lg" role="progressbar" aria-label="레벨 진행" aria-valuemin="0" aria-valuemax="${lv.need}" aria-valuenow="${lv.into}"><div class="progress-fill" style="width:${(lv.into / lv.need) * 100}%"></div></div>
-          <div class="stage-track" aria-label="탐험 단계">
-            ${[1, 2, 3, 4].map((n) => `<div class="stage ${n <= st ? 'on' : ''} ${n === st ? 'cur' : ''}"><b>${n}단계</b><span>${n <= st ? '' : '🔒 '}${STAGES[n].short}</span></div>`).join('')}
-          </div>
           <p class="sec-sub">${next ? `다음 단계 '${STAGES[next.stage].short}'는 퀘스트 ${next.needDone}개를 더 완료하거나 Lv.${next.level}이 되면 열려요` : '모든 단계가 열렸어요! 타본부 퀘스트까지 마음껏 도전해보세요'}</p>
         </section>`;
       this.bind(el);
@@ -2773,7 +2761,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       const counted = p.ids.includes(q.id);
       return `<button type="button" class="badge-hint" data-badge="${b.id}" style="${catVar(q.cat)}">
         ${badgeMedal(b, earned, 'sm')}
-        <span class="q-main"><b>${esc(badgeTitle(b))} 배지 ${earned ? '획득 완료' : `${p.done}/4`}</b>
+        <span class="q-main"><b>${esc(b.name)} 배지 ${earned ? '획득 완료' : `${p.done}/4`}</b>
           <span class="sec-sub">${earned ? esc(b.message) : counted ? '이 미션은 이미 배지 진행에 들어갔어요' : `이 미션을 완료하면 ${p.done + 1}/4가 돼요`}</span></span>
         <span class="chev" aria-hidden="true">›</span></button>`;
     },
@@ -3008,7 +2996,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       return fullScreen(`
         ${badgeMedal(b, true, 'xl')}
         <p class="cel-label">배지 획득!</p>
-        <p class="badge-big-name">${esc(badgeTitle(b))}</p>
+        <p class="badge-big-name">${esc(b.name)}</p>
         <p class="badge-msg">${esc(b.message)}</p>
         <button type="button" class="btn btn-primary" data-continue>컬렉션에 담기</button>`, '배지 획득');
     },
@@ -3019,7 +3007,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       const rec = (s.badges.earned || []).find((e) => e.id === id);
       Sheet.open(`
         <div class="badge-sheet-top">${badgeMedal(b, !!rec, 'lg')}
-          <div><h2 class="sheet-title">${esc(badgeTitle(b))}</h2><p class="sec-sub">${rec ? `${fmtDay(rec.date)} 획득` : `진행 ${p.done}/${p.total}`}</p></div></div>
+          <div><h2 class="sheet-title">${esc(b.name)}</h2><p class="sec-sub">${rec ? `${fmtDay(rec.date)} 획득` : `진행 ${p.done}/${p.total}`}</p></div></div>
         <p class="badge-msg left">${rec ? esc(b.message) : esc(b.rule)}</p>
         ${b.kind === 'category' ? `<ul class="badge-stages">${[1, 2, 3, 4].map((n) => `<li class="${p.stages[n] ? 'on' : ''}">
             <span class="bs-check" aria-hidden="true">${p.stages[n] ? '✓' : n}</span>
@@ -3043,7 +3031,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 7일 XP: ${days.map((d, i) => `${fmtShort(d)} ${vals[i]}`).join(', ')}">
       <line class="ch-grid" x1="${left}" x2="${W - right}" y1="${H - bottom}" y2="${H - bottom}"/>
       <line class="ch-goal" x1="${left}" x2="${W - right}" y1="${gy}" y2="${gy}"/>
-      <text class="ch-goal-t" x="${left}" y="${gy - 5}" text-anchor="start">목표 ${goal}</text>
+      <text class="ch-goal-t" x="${W - right}" y="${gy - 5}" text-anchor="end">목표 ${goal}</text>
       ${days.map((d, i) => {
         const x = left + slot * i + (slot - bw) / 2, v = vals[i], by = y(v), isT = d === today;
         const hit = v >= goal;
@@ -3059,13 +3047,17 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
   const RecordsTab = {
     render(el) {
       const s = App.state;
-      const fresh = new Set(Badges.unseen(s).map((e) => e.id));
       const wk = weekStartKey(Clock.today());
       const sum = weekSummary(s, wk);
       const quests = s.questHistory.filter((h) => h.kind === 'quest').slice().reverse();
-      const cats = [...new Set(quests.map((h) => h.category))];
-      const f = Main.histFilter;
       const withMedia = quests.filter((h) => h.media?.length).length;
+      // 카테고리 넘기는 바: 전체 · 인증 · 카테고리 10개 (완료 개수 표시)
+      const catCount = (c) => quests.filter((h) => h.category === c).length;
+      const filters = [['all', '전체', quests.length], ...(withMedia ? [['media', '📷 인증', withMedia]] : []),
+        ...Object.keys(CATEGORIES).map((c) => [c, `${CATEGORIES[c].emoji} ${CATEGORIES[c].label}`, catCount(c)])];
+      if (!filters.some(([id]) => id === Main.histFilter)) Main.histFilter = 'all';
+      const f = Main.histFilter;
+      const fi = filters.findIndex(([id]) => id === f);
       const list = quests.filter((h) => f === 'all' || (f === 'media' ? h.media?.length : h.category === f));
       const byDate = {};
       list.forEach((h) => { (byDate[h.date] = byDate[h.date] || []).push(h); });
@@ -3084,16 +3076,18 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           <div class="badge-grid">${BADGES.map((b) => {
             const earned = Badges.earnedIds(s).has(b.id), pr = Badges.progress(s, b);
             return `<button type="button" class="badge-tile ${earned ? 'earned' : ''}" data-badge="${b.id}" aria-label="${esc(b.name)} ${earned ? '획득' : `진행 ${pr.done}/${pr.total}`}">
-              ${badgeMedal(b, earned)}${fresh.has(b.id) ? '<span class="new-tag">NEW</span>' : ''}<span class="bt-name">${esc(badgeTitle(b))}</span>
+              ${badgeMedal(b, earned)}<span class="bt-name">${esc(b.name)}</span>
               <span class="bt-sub">${earned ? '획득!' : b.kind === 'category' ? `<span class="pips">${[1, 2, 3, 4].map((n) => `<i class="${pr.stages[n] ? 'on' : ''}"></i>`).join('')}</span>` : '0/1'}</span></button>`;
           }).join('')}</div>
         </section>
         <section class="sec">
           <div class="sec-head"><h2 class="sec-title">완료한 퀘스트</h2><span class="sec-sub">총 ${quests.length}개</span></div>
-          ${cats.length ? `<div class="filter-row" role="group" aria-label="카테고리 필터">
-            <button type="button" class="tag sm" data-f="all" aria-pressed="${f === 'all'}">전체</button>
-            ${withMedia ? `<button type="button" class="tag sm" data-f="media" aria-pressed="${f === 'media'}">📷 인증 ${withMedia}</button>` : ''}
-            ${cats.map((c) => `<button type="button" class="tag sm" data-f="${c}" aria-pressed="${f === c}">${CATEGORIES[c].emoji} ${CATEGORIES[c].label}</button>`).join('')}
+          ${quests.length ? `<div class="cat-swiper" role="group" aria-label="카테고리 넘기기">
+            <button type="button" class="cs-arrow" data-step="-1" aria-label="이전 카테고리"${fi <= 0 ? ' disabled' : ''}>‹</button>
+            <div class="filter-row cs-track" id="hist-filters">
+              ${filters.map(([id, label, n]) => `<button type="button" class="tag sm ${n ? '' : 'is-zero'}" data-f="${id}" aria-pressed="${f === id}">${label} <span class="cs-n">${n}</span></button>`).join('')}
+            </div>
+            <button type="button" class="cs-arrow" data-step="1" aria-label="다음 카테고리"${fi >= filters.length - 1 ? ' disabled' : ''}>›</button>
           </div>` : ''}
           ${list.length ? Object.entries(byDate).map(([d, hs]) => `
             <div class="hist-day"><h3 class="hist-date">${fmtDay(d)}${d === Clock.today() ? ' · 오늘' : ''}</h3>
@@ -3102,12 +3096,27 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
                 <span class="q-main"><span class="q-title sm">${esc(h.title)}</span>
                   ${thumbsHTML(h.media, h.uid)}</span>
                 <span class="xp">+${h.xp}</span></div>`).join('')}
-            </div>`).join('') : `<div class="empty">${mascot('sm')}<p>아직 완료한 퀘스트가 없어요.<br>홈에서 ⚡ 빠른 퀘스트부터 시작해보세요!</p></div>`}
+            </div>`).join('') : `<div class="empty">${mascot('sm')}<p>${quests.length && f !== 'all' ? `아직 완료한 ${f === 'media' ? '인증' : CATEGORIES[f].label} 퀘스트가 없어요.<br>‹ › 를 눌러 다른 카테고리도 넘겨보세요` : '아직 완료한 퀘스트가 없어요.<br>홈에서 ⚡ 빠른 퀘스트부터 시작해보세요!'}</p></div>`}
         </section>`;
       $('#open-report', el).addEventListener('click', () => Report.open(wk));
-      if (Badges.markSeen(s)) { App.commit(); Main.updateBadgeDot(); }
       el.querySelectorAll('[data-badge]').forEach((b) => b.addEventListener('click', () => BadgeSheet.open(b.dataset.badge)));
-      el.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { Main.histFilter = b.dataset.f; Main.render(); }));
+      const track = $('#hist-filters', el);
+      const prevScroll = Main.histScroll || 0;
+      const setFilter = (id) => { Main.histScroll = track ? track.scrollLeft : 0; Main.histFilter = id; Main.render(); };
+      el.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => setFilter(b.dataset.f)));
+      el.querySelectorAll('[data-step]').forEach((b) => b.addEventListener('click', () => {
+        const n = fi + Number(b.dataset.step);
+        if (filters[n]) setFilter(filters[n][0]);
+      }));
+      if (track) {
+        // 이전 스크롤 위치에서 시작해 선택한 칩이 가운데 오도록 부드럽게 이동 (페이지는 움직이지 않음)
+        track.scrollLeft = prevScroll;
+        const on = track.querySelector('[aria-pressed="true"]');
+        if (on) {
+          const target = on.offsetLeft - (track.clientWidth - on.offsetWidth) / 2;
+          requestAnimationFrame(() => track.scrollTo({ left: Math.max(0, target), behavior: 'smooth' }));
+        }
+      }
       bindThumbs(el);
     },
   };
@@ -3177,9 +3186,9 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     const today = Clock.today();
     // [며칠 전, 퀘스트 id]
     const plan = [
-      [13, 'Q007'], [12, 'Q013'], [12, 'Q003'], [10, 'Q012'], [9, 'Q065'], [9, 'Q044'], [8, 'Q023'],
-      [7, 'Q014'], [5, 'Q053'], [5, 'Q032'], [4, 'Q001'], [3, 'Q061'], [3, 'Q069'], [2, 'Q026'],
-      [1, 'Q071'], [1, 'Q082'], [1, 'Q067'],
+      [13, 'Q007'], [12, 'Q108'], [12, 'Q102'], [10, 'Q107'], [9, 'Q065'], [9, 'Q044'], [8, 'Q023'],
+      [7, 'Q014'], [5, 'Q053'], [5, 'Q135'], [4, 'Q001'], [3, 'Q113'], [3, 'Q117'], [2, 'Q026'],
+      [1, 'Q148'], [1, 'Q121'], [1, 'Q067'],
     ];
     plan.forEach(([ago, id], i) => {
       const q = QMAP[id], date = addDays(today, -ago);
@@ -3192,7 +3201,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       s.questHistory.push({ kind: 'step', uid: `demo-step-${i}`, questId: id, category: QMAP[id].cat, date, completedAt: `${date}T09:00:00.000Z`, xp: STEP_XP, step: i });
       s.stats.dailyXP[date] += STEP_XP; s.stats.totalXP += STEP_XP;
     });
-    s.swapHistory.push({ date: addDays(today, -6), at: nowISO(), fromId: 'Q078', category: 'event', reason: 'no_time', toId: 'Q073' });
+    s.swapHistory.push({ date: addDays(today, -6), at: nowISO(), fromId: 'Q150', category: 'event', reason: 'no_time', toId: 'Q143' });
     s.swapHistory.push({ date: addDays(today, -3), at: nowISO(), fromId: 'Q057', category: 'health', reason: 'burden', toId: 'Q053' });
     s.stats.level = levelOf(s.stats.totalXP);
     Badges.check(s);

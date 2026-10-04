@@ -2885,7 +2885,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       Detail.close();
       Main.render();
       const choice = await Celebration.show(res);
-      if (res.after.level > res.before.level || res.after.stage > res.before.stage) await LevelUp.show(res.before, res.after);
+      if (res.after.level > res.before.level) await LevelUp.show(res.before, res.after);
       for (const b of res.newBadges || []) await BadgeWin.show(b);
       this.busy = false;
       Main.render();
@@ -2976,16 +2976,13 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
   };
   const LevelUp = {
     show(before, after) {
-      const lvUp = after.level > before.level;
       const titleChanged = titleOf(after.level) !== titleOf(before.level);
-      const stageUp = after.stage > before.stage;
       return fullScreen(`
         <div class="mascot-wrap lg">${mascotSVG('jump')}</div>
-        <p class="cel-label">${lvUp ? '레벨 업!' : '새 단계 오픈!'}</p>
-        ${lvUp ? `<p class="lv-big"><small>Lv.</small>${after.level}</p><p class="lv-title center">${titleOf(after.level)}</p>` : ''}
-        ${lvUp && titleChanged ? `<p class="banner ok center">새 칭호를 얻었어요: ${titleOf(after.level)}</p>` : ''}
-        ${stageUp ? `<div class="banner accent center">🔓 ${after.stage}단계 '${STAGES[after.stage].target}' 퀘스트가 열렸어요</div>` : ''}
-        <button type="button" class="btn btn-primary" data-continue>좋아요!</button>`, lvUp ? '레벨 업' : '새 단계');
+        <p class="cel-label">레벨 업!</p>
+        <p class="lv-big"><small>Lv.</small>${after.level}</p><p class="lv-title center">${titleOf(after.level)}</p>
+        ${titleChanged ? `<p class="banner ok center">새 칭호를 얻었어요: ${titleOf(after.level)}</p>` : ''}
+        <button type="button" class="btn btn-primary" data-continue>좋아요!</button>`, '레벨 업');
     },
   };
   function badgeMedal(b, earned, size = '') {

@@ -1064,11 +1064,12 @@ select.text-input { appearance: auto; }
     growth:    { label: '성장',         detail: '업무 관련·무관',              emoji: '🌱', color: '#5E8F1F', work: true, ask: '배운 점을 나눠보고 싶어서' },
     terms:     { label: '업무용어',     detail: '',                         emoji: '🔤', color: '#3B5BA9', work: true, ask: '업무 용어를 하나 여쭤보고 싶어서' },
   };
-  const STAGES = {
-    1: { target: '동기',          short: '동기',   unlock: null },
-    2: { target: '팀 동료',       short: '팀 동료', unlock: { done: 2, level: 2 } },
-    3: { target: '선배',          short: '선배',   unlock: { done: 5, level: 3 } },
-    4: { target: '타본부 구성원', short: '타본부', unlock: { done: 9, level: 5 } },
+  // 퀘스트를 함께할 대상 (퀘스트 데이터의 숫자 1~4)
+  const TARGETS = {
+    1: { target: '동기',          short: '동기' },
+    2: { target: '팀 동료',       short: '팀 동료' },
+    3: { target: '선배',          short: '선배' },
+    4: { target: '타본부 구성원', short: '타본부' },
   };
   const DIFFICULTY = { easy: { label: '쉬움', xp: 10 }, normal: { label: '보통', xp: 20 }, hard: { label: '도전', xp: 40 } };
   const STEP_XP = 3;
@@ -1080,7 +1081,7 @@ select.text-input { appearance: auto; }
   const levelOf = (xp) => Math.floor((xp || 0) / XP_PER_LEVEL) + 1;
   const titleOf = (lv) => TITLES.find(([l]) => lv >= l)[1];
 
-  // 난이도: 대상 단계 기준(동기=쉬움, 팀·선배=보통, 타본부=도전), 40분 이상이면 한 단계 위, 5분 이내면 한 단계 아래
+  // 난이도: 대상 기준(동기=쉬움, 팀·선배=보통, 타본부=도전), 40분 이상이면 한 단계 위, 5분 이내면 한 단계 아래
   function difficultyOf(stage, minutes) {
     const order = ['easy', 'normal', 'hard'];
     let i = stage === 1 ? 0 : stage === 4 ? 2 : 1;
@@ -1091,7 +1092,7 @@ select.text-input { appearance: auto; }
 
   // 받침 있으면 '과', 없으면 '와'
   const josaWa = (word) => { const c = String(word).trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; };
-  // [ID, 카테고리, 단계(대상), 미션(원문), 예상 분, 함께 여부, 세부 구분] — 퀘스트 목록 - 통합질문서.csv
+  // [ID, 카테고리, 대상(1 동기·2 팀 동료·3 선배·4 타본부), 미션(원문), 예상 분, 함께 여부, 세부 구분] — 퀘스트 목록 - 통합질문서.csv
   //   목록에 그대로 남은 미션은 기존 ID 유지(진행 기록·배지 보존), 새 미션은 Q101부터 번호 부여
   //   대상·시간·함께 여부는 목록에 없어서 미션 문장에서 추정 (선배→선배, 동기→동기, 동료→팀 동료, 다른 본부·처음 만난 분→타본부, 사람 없음→혼자)
   const QUEST_ROWS = [
@@ -1196,7 +1197,7 @@ select.text-input { appearance: auto; }
     ["Q100", "terms", 1, "용어 퀴즈를 하나 만들어 동기에게 내보세요.", 10, true, ""],
     ["Q132", "terms", 4, "다른 본부에서는 자주 쓰는데 내 본부 사람들은 잘 모르는 용어가 있는지 다른 본부 사람에게 질문해보세요.", 15, true, ""],
   ];
-  const STAGE_TIPS = {
+  const TARGET_TIPS = {
     1: '메신저로 가볍게 먼저 말을 걸어봐요. 답이 오면 내 이야기도 하나 덧붙이면 대화가 이어져요.',
     2: '바쁘지 않은 타이밍에 자리 근처에서 가볍게 시작해보세요. 점심이나 커피 시간이 좋아요.',
     3: '"잠깐 여쭤봐도 될까요?"로 시작하면 부담이 줄어요. 커피 타이밍을 노려보세요.',
@@ -1207,12 +1208,12 @@ select.text-input { appearance: auto; }
     const difficulty = difficultyOf(stage, minutes);
     return {
       id, cat, stage, title, minutes, together, sub, quick: minutes <= 5,
-      ask: CATEGORIES[cat].ask, tip: together ? STAGE_TIPS[stage] : SOLO_TIP,
-      desc: together ? `${STAGES[stage].target}${josaWa(STAGES[stage].target)} 함께하는 미션이에요.` : '혼자 바로 할 수 있는 미션이에요.',
+      ask: CATEGORIES[cat].ask, tip: together ? TARGET_TIPS[stage] : SOLO_TIP,
+      desc: together ? `${TARGETS[stage].target}${josaWa(TARGETS[stage].target)} 함께하는 미션이에요.` : '혼자 바로 할 수 있는 미션이에요.',
       difficulty, xp: DIFFICULTY[difficulty].xp,
     };
   });
-  const targetLabel = (q) => (q.together ? STAGES[q.stage].target : '혼자');
+  const targetLabel = (q) => (q.together ? TARGETS[q.stage].target : '혼자');
   const QMAP = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
 
   // 관심사 = 엑셀 카테고리 10개 (1:1 연결)
@@ -1235,7 +1236,7 @@ select.text-input { appearance: auto; }
     { id: 'not_interested', label: '지금은 관심 없어요', hint: '이 카테고리를 당분간 덜 추천해요' },
     { id: 'no_time',        label: '시간이 없어요',      hint: '며칠간 짧은 퀘스트 위주로 추천해요' },
     { id: 'done_before',    label: '이미 해봤어요',      hint: '이 퀘스트는 다시 추천하지 않아요' },
-    { id: 'burden',         label: '부담스러워요',       hint: '한 단계 가까운 사람과의 퀘스트를 추천해요' },
+    { id: 'burden',         label: '부담스러워요',       hint: '더 가까운 사람과의 퀘스트를 추천해요' },
   ];
 
   /* =========================================================
@@ -1274,7 +1275,7 @@ select.text-input { appearance: auto; }
   const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
   /* =========================================================
-   * 13. 추천 엔진 (관심사 · 단계 · 교체 이유 반영)
+   * 13. 추천 엔진 (관심사 · 교체 이유 반영)
    * ========================================================= */
   const doneQuestCount = (s) => s.questHistory.filter((h) => h.kind === 'quest').length;
   const questLine = (q) => `${q.id}|${CATEGORIES[q.cat].label}|${targetLabel(q)}|${q.minutes}분|${q.together ? '함께' : '혼자'}|${q.title}`;
@@ -1318,34 +1319,20 @@ select.text-input { appearance: auto; }
         doneBefore: new Set(s.swapHistory.filter((x) => x.reason === 'done_before').map((x) => x.fromId)),
       };
     },
-    stage(s) {
-      const done = doneQuestCount(s), lv = levelOf(s.stats.totalXP);
-      let st = 1;
-      [2, 3, 4].forEach((n) => { const u = STAGES[n].unlock; if (done >= u.done || lv >= u.level) st = n; });
-      return st;
-    },
-    nextUnlock(s) {
-      const st = this.stage(s);
-      if (st >= 4) return null;
-      const u = STAGES[st + 1].unlock;
-      return { stage: st + 1, needDone: Math.max(1, u.done - doneQuestCount(s)), level: u.level };
-    },
     recentDone(s, days) {
       const t = Clock.today();
       return new Set(s.questHistory.filter((h) => h.kind === 'quest' && diffDays(t, h.date) < days).map((h) => h.questId));
     },
-    ctx(s) { return { w: this.weights(s), p: this.prefs(s), stage: this.stage(s) }; },
+    ctx(s) { return { w: this.weights(s), p: this.prefs(s) }; },
     weightOf(q, ctx) {
       let w = ctx.w[q.cat] || 1;
-      w *= q.stage === ctx.stage ? 3 : q.stage === ctx.stage - 1 ? 2 : 1;
       if (ctx.p.short && q.minutes > 15) w *= 0.3;
-      if (ctx.p.comfort && ctx.stage > 1 && q.stage >= ctx.stage) w *= 0.4;
+      if (ctx.p.comfort && q.together && q.stage >= 3) w *= 0.4;
       return w;
     },
     candidates(s, { quick, exclude, ctx }) {
       const base = (q) => (quick === true ? q.minutes <= 5 : quick === false ? q.minutes > 5 : true);
-      let pool = QUESTS.filter((q) => base(q) && q.stage <= ctx.stage && !exclude.has(q.id) && !ctx.p.doneBefore.has(q.id));
-      if (!pool.length) pool = QUESTS.filter((q) => base(q) && q.stage <= ctx.stage && !exclude.has(q.id));
+      let pool = QUESTS.filter((q) => base(q) && !exclude.has(q.id) && !ctx.p.doneBefore.has(q.id));
       if (!pool.length) pool = QUESTS.filter((q) => base(q) && !exclude.has(q.id));
       if (!pool.length) pool = QUESTS.filter(base);
       return pool;
@@ -1360,7 +1347,7 @@ select.text-input { appearance: auto; }
       const used = new Set();
       const strict = new Set([...this.recentDone(s, 7), ...prevIds]);
       const loose = this.recentDone(s, 3);
-      const base = (q) => q.stage <= ctx.stage && !ctx.p.doneBefore.has(q.id) && !today.has(q.id) && !loose.has(q.id);
+      const base = (q) => !ctx.p.doneBefore.has(q.id) && !today.has(q.id) && !loose.has(q.id);
       const pool = (fn) => narrow(narrow(QUESTS.filter((q) => base(q) && fn(q)), (q) => !strict.has(q.id)), (q) => !used.has(q.cat));
       const first = (...fns) => { for (const fn of fns) { const p = pool(fn); if (p.length) return p; } return QUESTS.filter((q) => !today.has(q.id)); };
       const take = (p) => { const q = weightedPick(p, (x) => this.weightOf(x, ctx), rand); today.add(q.id); used.add(q.cat); return q; };
@@ -1386,8 +1373,6 @@ select.text-input { appearance: auto; }
       const tag = e && (e.primary ? `관심사 '${label}'` : `'${label}'${josaWa(label)} 이어지는 ${CATEGORIES[q.cat].label}`);
       if (slot === 'quick') return e ? `${tag} · 5분이면 충분해요` : '5분이면 끝나는 빠른 퀘스트예요';
       if (e) return e.primary ? `관심사 '${label}'에 맞춘 퀘스트예요` : `${tag} 퀘스트예요`;
-      const st = this.stage(s);
-      if (q.stage === st && st > 1) return `새로 열린 ${st}단계(${STAGES[st].short}) 퀘스트예요`;
       return '새로운 경험을 넓혀줄 퀘스트예요';
     },
     replacement(s, item, reason) {
@@ -1435,7 +1420,7 @@ select.text-input { appearance: auto; }
       if (max != null) tags.push(`${max}분 이내`);
       if (solo) tags.push('혼자 할 수 있는');
       if (social) tags.push('사람을 만나는');
-      if (stage) tags.push(`${STAGES[stage].short} 대상`);
+      if (stage) tags.push(`${TARGETS[stage].short} 대상`);
       [...cats].slice(0, 2).forEach((c) => tags.push(CATEGORIES[c].label));
       return {
         picks: picks.map((q) => ({ id: q.id, reason: this.reasonFor(s, q, q.quick ? 'quick' : 'main') })),
@@ -1468,7 +1453,7 @@ select.text-input { appearance: auto; }
     },
     profileBrief(s) {
       const p = s.profile;
-      return `닉네임 ${p.nickname}, ${divisionOf(p.division)?.label || ''} ${p.team}, 입사 ${tenureMonth(p.joinMonth)}개월차, 관심사: ${p.interests.join(', ')}, 네트워킹 성향: ${styleOf(p.networkingStyle)?.label || '-'}, 열린 단계: ${this.stage(s)}단계(${STAGES[this.stage(s)].target}까지)`;
+      return `닉네임 ${p.nickname}, ${divisionOf(p.division)?.label || ''} ${p.team}, 입사 ${tenureMonth(p.joinMonth)}개월차, 관심사: ${p.interests.join(', ')}, 네트워킹 성향: ${styleOf(p.networkingStyle)?.label || '-'}`;
     },
   };
 
@@ -1515,7 +1500,7 @@ JSON으로만 답해: {"note":"어떤 기준으로 골랐는지 30자 이내","p
       const res = await AI.json(`${AI_PERSONA}
 신입 회계사가 아래 퀘스트를 해보고 싶지만 행동으로 옮기기 부담스러워해. 바로 실행할 수 있는 작은 단계 2~4개로 나눠줘.
 규칙: 첫 단계는 반드시 2분 안에 끝나는 아주 쉬운 행동. 마지막 단계는 퀘스트 자체를 해내는 것. 각 단계는 30자 이내 한국어 행동 문장.
-퀘스트: ${q.title} / 설명: ${q.desc} / 대상: ${STAGES[q.stage].target} / 예상 ${q.minutes}분
+퀘스트: ${q.title} / 설명: ${q.desc} / 대상: ${TARGETS[q.stage].target} / 예상 ${q.minutes}분
 JSON으로만 답해: {"steps":[{"text":"...","minutes":2}]}`);
       const steps = (Array.isArray(res?.steps) ? res.steps : [])
         .map((x) => ({ text: str(x?.text, 60), minutes: Math.max(1, Math.min(120, Math.round(Number(x?.minutes) || 5))) }))
@@ -1529,7 +1514,7 @@ JSON으로만 답해: {"steps":[{"text":"...","minutes":2}]}`);
       const res = await AI.json(`${AI_PERSONA}
 회사 ${o.channel === 'messenger' ? '사내 메신저로 보낼' : '대면으로 건넬'} 첫마디를 3가지 톤으로 써줘.
 보내는 사람: ${Engine.profileBrief(s)}
-상대: ${rank}, ${STAGES[q.stage].target}, ${o.known ? '아는 사이' : '처음 연락하는 사이'}
+상대: ${rank}, ${TARGETS[q.stage].target}, ${o.known ? '아는 사이' : '처음 연락하는 사이'}
 목적(퀘스트): ${q.title} — ${q.desc}
 규칙: 자연스러운 존댓말, 각 2~4문장, 상대가 부담 없이 거절할 수 있는 여지를 남길 것, 상대 이름은 모르니 호칭은 '선배님' '매니저님' 등으로(Associate면 호칭 없이 인사), 이모지는 friendly에만 최대 1개.
 JSON으로만 답해: {"polite":"정중하게","friendly":"친근하게","short":"짧고 가볍게"}`);
@@ -1591,7 +1576,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     if (sum.people < sum.quests / 2) return { comment: '혼자서도 꾸준히 해낸 한 주였어요.', next: '다음 주엔 👥 함께하는 퀘스트를 하나 더 도전해봐요.' };
     return {
       comment: `${sum.people}번이나 사람들과 교류한 활발한 한 주였어요!`,
-      next: sum.least ? `다음 주엔 '${CATEGORIES[sum.least].label}' 퀘스트도 한 번 시도해볼까요?` : '다음 주엔 한 단계 위 퀘스트에 도전해봐요.',
+      next: sum.least ? `다음 주엔 '${CATEGORIES[sum.least].label}' 퀘스트도 한 번 시도해볼까요?` : '다음 주엔 처음 만나는 사람과 하는 퀘스트에 도전해봐요.',
     };
   }
 
@@ -1602,7 +1587,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     goal(s) { const g = s.profile.dailyGoalXP || DEFAULT_DAILY_GOAL; return s.settings.busySeason ? Math.max(5, Math.round(g / 2)) : g; },
     todayXP(s) { return s.stats.dailyXP[Clock.today()] || 0; },
     snapshot(s) {
-      return { total: s.stats.totalXP, level: levelOf(s.stats.totalXP), today: this.todayXP(s), goal: this.goal(s), streak: s.stats.streak, gems: s.stats.gems, stage: Engine.stage(s) };
+      return { total: s.stats.totalXP, level: levelOf(s.stats.totalXP), today: this.todayXP(s), goal: this.goal(s), streak: s.stats.streak, gems: s.stats.gems };
     },
     award(s, xp, { gems = 0, active = true } = {}) {
       const t = Clock.today();
@@ -2527,7 +2512,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <span class="status-pill ${it.status}">${statusLabel[it.status]}</span>
           </span>
           <span class="q-title">${esc(q.title)}</span>
-          <span class="q-meta"><span>⏱ ${q.minutes}분</span><span class="xp">+${q.xp} XP</span><span>${q.together ? `👥 ${STAGES[q.stage].short}` : '🙋 혼자'}</span>${stepInfo}</span>
+          <span class="q-meta"><span>⏱ ${q.minutes}분</span><span class="xp">+${q.xp} XP</span><span>${q.together ? `👥 ${TARGETS[q.stage].short}` : '🙋 혼자'}</span>${stepInfo}</span>
           ${it.reason && it.status !== 'done' ? `<span class="q-reason">${esc(it.reason)}</span>` : ''}
         </span>
         ${it.status === 'done' ? '<span class="check-done" aria-hidden="true">✓</span>' : ''}
@@ -2540,7 +2525,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     render(el) {
       const s = App.state, dq = s.dailyQuests;
       const done = dq.items.filter((i) => i.status === 'done').length;
-      const lv = levelInfo(s.stats.totalXP), level = lv.level, next = Engine.nextUnlock(s);
+      const lv = levelInfo(s.stats.totalXP), level = lv.level;
       el.innerHTML = `
         <div class="talk home-talk">${mascot('sm')}<p class="bubble">${esc(Greeting.text(s))}</p></div>
 
@@ -2571,7 +2556,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <span class="sec-sub tabnum">${s.stats.totalXP} XP</span>
           </div>
           <div class="progress lg" role="progressbar" aria-label="레벨 진행" aria-valuemin="0" aria-valuemax="${lv.need}" aria-valuenow="${lv.into}"><div class="progress-fill" style="width:${(lv.into / lv.need) * 100}%"></div></div>
-          <p class="sec-sub">${next ? `다음 단계 '${STAGES[next.stage].short}'는 퀘스트 ${next.needDone}개를 더 완료하거나 Lv.${next.level}이 되면 열려요` : '모든 단계가 열렸어요! 타본부 퀘스트까지 마음껏 도전해보세요'}</p>
         </section>`;
       this.bind(el);
     },
@@ -2588,7 +2572,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           return `<div class="mini-q" style="${catVar(q.cat)}">
             <span class="cat-icon sm" aria-hidden="true">${CATEGORIES[q.cat].emoji}</span>
             <span class="q-main"><span class="q-title sm">${esc(q.title)}</span>
-              <span class="q-meta"><span>⏱ ${q.minutes}분</span><span class="xp">+${q.xp} XP</span><span>${q.together ? `👥 ${STAGES[q.stage].short}` : '🙋 혼자'}</span>${q.quick ? '<span>⚡</span>' : ''}</span>
+              <span class="q-meta"><span>⏱ ${q.minutes}분</span><span class="xp">+${q.xp} XP</span><span>${q.together ? `👥 ${TARGETS[q.stage].short}` : '🙋 혼자'}</span>${q.quick ? '<span>⚡</span>' : ''}</span>
               <span class="q-reason">${esc(p.reason)}</span></span>
             <button type="button" class="btn btn-secondary xs" data-add="${p.id}" ${added || left <= 0 ? 'disabled' : ''}>${added ? '추가됨' : '오늘의 퀘스트에 추가'}</button>
           </div>`;
@@ -2713,7 +2697,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
         <div class="page-body">
           <div class="detail-hero" style="${catVar(q.cat)}">
             <span class="cat-icon lg" aria-hidden="true">${c.emoji}</span>
-            <div class="q-top"><span class="q-cat">${c.label}</span>${q.sub ? `<span class="pill">${esc(q.sub)}</span>` : ''}${q.quick ? '<span class="pill quick">⚡ 빠른 퀘스트</span>' : ''}<span class="pill">${q.together ? `👥 ${STAGES[q.stage].target}${josaWa(STAGES[q.stage].target)} 함께` : '🙋 혼자 하는 미션'}</span></div>
+            <div class="q-top"><span class="q-cat">${c.label}</span>${q.sub ? `<span class="pill">${esc(q.sub)}</span>` : ''}${q.quick ? '<span class="pill quick">⚡ 빠른 퀘스트</span>' : ''}<span class="pill">${q.together ? `👥 ${TARGETS[q.stage].target}${josaWa(TARGETS[q.stage].target)} 함께` : '🙋 혼자 하는 미션'}</span></div>
             <h1 class="detail-title">${esc(q.title)}</h1>
             <p class="detail-desc">${esc(q.desc)}</p>
           </div>
@@ -2722,7 +2706,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <div><dt>난이도</dt><dd>${DIFFICULTY[q.difficulty].label}</dd></div>
             <div><dt>예상 시간</dt><dd>${q.minutes}분</dd></div>
             <div><dt>획득 XP</dt><dd class="xp">+${q.xp} XP</dd></div>
-            <div class="wide"><dt>단계 · 대상</dt><dd>${q.stage}단계 · ${q.together ? STAGES[q.stage].target : '혼자 (1단계부터 가능)'}</dd></div>
+            <div class="wide"><dt>대상</dt><dd>${q.together ? TARGETS[q.stage].target : '혼자'}</dd></div>
           </dl>
           <div class="talk">${mascot('sm')}<p class="bubble small">${esc(q.tip)}</p></div>
           ${it.reason ? `<p class="q-reason">추천 이유 · ${esc(it.reason)}</p>` : ''}
@@ -3556,7 +3540,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
   /* 다음 단계에서 콘솔/다른 모듈이 접근할 수 있도록 노출 */
   window.AssociateQuest = {
     App, Store, Onboarding, Main, Detail, Report, Engine, AI, AIQuest, Progress, Clock, Badges, STEP,
-    constants: { DIVISIONS, INTEREST_GROUPS, NETWORKING_STYLES, DAILY_GOALS, XP_PER_LEVEL, QUESTS, CATEGORIES, STAGES, BADGES },
+    constants: { DIVISIONS, INTEREST_GROUPS, NETWORKING_STYLES, DAILY_GOALS, XP_PER_LEVEL, QUESTS, CATEGORIES, TARGETS, BADGES },
     helpers: { createInitialState, migrate, normalizeProfile, levelInfo, levelOf, titleOf, tenureMonth, mascotSVG, weekSummary, localOpeners, buildDemoState },
   };
 

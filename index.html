@@ -1028,7 +1028,7 @@ select.text-input { appearance: auto; }
     4: { target: '타본부 구성원', short: '타본부' },
   };
   const DIFFICULTY = { easy: { label: '쉬움', xp: 10 }, normal: { label: '보통', xp: 20 }, hard: { label: '도전', xp: 40 } };
-  const STEP_XP = 3;
+  const STEP_XP = 0;   // 쪼갠 단계는 XP 없음 (퀘스트를 끝내야 XP)
   const GEMS_PER_QUEST = 5;
   const SWAP_COST = 10;
   const START_GEMS = 30;
@@ -2802,7 +2802,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <span class="step-text">${esc(x.text)}</span><span class="step-min">${x.minutes}분</span></label></li>`).join('')}
         </ol>
         ${banner}
-        <p class="sec-sub">단계마다 +${STEP_XP} XP, 모두 끝내면 +${q.xp} XP를 추가로 받아요.</p>`;
+        <p class="sec-sub">단계를 모두 끝내면 퀘스트 완료로 +${q.xp} XP를 받아요.</p>`;
     },
     action(act) {
       const it = this.item();
@@ -2837,7 +2837,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       Main.refresh();
       const all = res.doneCount === it.steps.length;
       if (all) { setTimeout(() => Complete.open(it), 350); }
-      else toast(res.doneCount === 1 ? `첫 단계 성공! +${STEP_XP} XP` : `+${STEP_XP} XP · ${res.doneCount}/${it.steps.length}단계`);
+      else toast(res.doneCount === 1 ? '첫 단계 성공!' : `${res.doneCount}/${it.steps.length}단계 완료`);
       if (res.after.level > res.before.level) LevelUp.show(res.before, res.after);
     },
   };

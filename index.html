@@ -1033,7 +1033,8 @@ select.text-input { appearance: auto; }
   const SWAP_COST = 10;
   const START_GEMS = 30;
   const REQUEST_LIMIT = 3;
-  const TITLES = [[10, 'Quest Master'], [8, '사내 탐험가'], [5, '인싸 Associate'], [3, '적응 중인 Associate'], [1, '신입 Associate']];
+  // 칭호: 퀘스트 100개를 한 번씩 다 하면 1,840 XP(Lv.19) → Quest Master는 약 92개(1,700 XP)에서 획득
+  const TITLES = [[18, 'Quest Master'], [12, '사내 탐험가'], [7, '인싸 Associate'], [3, '루키 Associate'], [1, '신입 Associate']];
   const levelOf = (xp) => Math.floor((xp || 0) / XP_PER_LEVEL) + 1;
   const titleOf = (lv) => TITLES.find(([l]) => lv >= l)[1];
 

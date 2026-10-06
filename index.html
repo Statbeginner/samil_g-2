@@ -531,6 +531,8 @@ button { cursor: pointer; }
 .lv-text { flex: 1; min-width: 0; }
 .lv-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 18px; }
 .progress.lg { height: 14px; flex: none; }
+.next-title { margin: 0; font-size: 13.5px; color: var(--fg-muted); word-break: keep-all; }
+.next-title b { font-family: var(--font-display); font-weight: 400; color: var(--brand); }
 
 /* 오버레이 · 시트 */
 #overlay-root { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
@@ -1199,12 +1201,21 @@ select.text-input { appearance: auto; }
     [/대화|수다|인사|친구|네트워킹|스몰토크/, 'smalltalk'], [/행사|타운홀|모임|봉사/, 'event'],
     [/성장|독서|책|영어|엑셀|자기계발/, 'growth'], [/용어|단어/, 'terms'], [/대인관계|관계|클라이언트|고객|상사|갈등|보고/, 'relation'],
   ];
+  // 네트워킹 성향별로 더 자주 추천할 카테고리 (함께하는 퀘스트에만 적용)
+  //   1:1 = 한 사람과 묻고 이야기하는 대화형, 여럿이 = 점심·행사·운동처럼 같이 움직이는 활동형
+  const STYLE_CATS = {
+    one_on_one: new Set(['career', 'study', 'feedback', 'growth', 'terms', 'smalltalk', 'relation']),
+    group: new Set(['food', 'hobby', 'health', 'event']),
+  };
+  const STYLE_W = 1.5;
   const SWAP_REASONS = [
     { id: 'not_interested', label: '지금은 관심 없어요', hint: '이 카테고리를 당분간 덜 추천해요' },
     { id: 'no_time',        label: '시간이 없어요',      hint: '며칠간 짧은 퀘스트 위주로 추천해요' },
     { id: 'done_before',    label: '이미 해봤어요',      hint: '이 퀘스트는 다시 추천하지 않아요' },
     { id: 'burden',         label: '부담스러워요',       hint: '더 가까운 사람과의 퀘스트를 추천해요' },
+    { id: 'other',          label: '기타',               hint: '이유를 짧게 적어도 되고, 비워둬도 괜찮아요' },
   ];
+  const SWAP_NOTE_MAX = 40;
 
   /* =========================================================
    * 13. 추천 엔진 (관심사 · 교체 이유 반영)
@@ -1254,9 +1265,10 @@ select.text-input { appearance: auto; }
       const t = Clock.today();
       return new Set(s.questHistory.filter((h) => h.kind === 'quest' && diffDays(t, h.date) < days).map((h) => h.questId));
     },
-    ctx(s) { return { w: this.weights(s), p: this.prefs(s) }; },
+    ctx(s) { return { w: this.weights(s), p: this.prefs(s), style: STYLE_CATS[s.profile.networkingStyle] }; },
     weightOf(q, ctx) {
       let w = ctx.w[q.cat] || 1;
+      if (q.together && ctx.style?.has(q.cat)) w *= STYLE_W;
       if (ctx.p.short && q.minutes > 15) w *= 0.3;
       if (ctx.p.comfort && q.together && q.stage >= 3) w *= 0.4;
       return w;
@@ -1967,7 +1979,7 @@ select.text-input { appearance: auto; }
               <span class="choice-text"><span class="choice-title">${s.label}</span><span class="choice-desc">${s.desc}</span></span>
             </button>`).join('')}
         </div>
-        <p class="hint">${icon('info', 18)}<span>성향에 맞춰 1:1 커피챗 또는 여럿이 함께하는 퀘스트를 더 자주 추천해요</span></p>`;
+        <p class="hint">${icon('info', 18)}<span>성향에 맞춰 1:1로 이야기하는 퀘스트나 여럿이 함께 움직이는 퀘스트를 더 자주 추천해요</span></p>`;
         radioGroup(body, (id) => { d.networkingStyle = id; ctx.refresh(); });
       },
       valid: (d) => !!styleOf(d.networkingStyle),
@@ -2325,9 +2337,14 @@ select.text-input { appearance: auto; }
       if (this.bound) return;
       this.bound = true;
       document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => this.switchTab(b.dataset.tab)));
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && App.state && !$('#screen-main').hidden && App.state.dailyQuests.date !== Clock.today()) { this.ensureToday(); this.render(); }
-      });
+      // 앱을 켜 둔 채 자정이 지나거나, 다른 탭에 있다 돌아오면 오늘 날짜로 새로 고침
+      const rollover = () => {
+        if (!App.state || $('#screen-main').hidden || App.state.dailyQuests.date === Clock.today()) return;
+        this.ensureToday(); this.render(); Detail.rerender();
+        toast(`${fmtDay(Clock.today())} · 새로운 하루의 퀘스트가 준비됐어요`);
+      };
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') rollover(); });
+      setInterval(rollover, 60 * 1000);
     },
     ensureToday() {
       const s = App.state, t = Clock.today();
@@ -2430,6 +2447,14 @@ select.text-input { appearance: auto; }
     </div>`;
   }
 
+  // 다음 칭호까지: [레벨, 칭호]는 TITLES에서 지금 레벨보다 높은 것 중 가장 가까운 것
+  function nextTitleHTML(level, xp) {
+    const next = TITLES.filter(([l]) => l > level).pop();
+    if (!next) return '👑 최고 칭호를 얻었어요!';
+    const [l, title] = next;
+    return `🏅 Lv.${l}이 되면 <b>${esc(title)}</b> 칭호 · ${(l - 1) * XP_PER_LEVEL - xp} XP 남았어요`;
+  }
+
   const HomeTab = {
     render(el) {
       const s = App.state, dq = s.dailyQuests;
@@ -2457,6 +2482,7 @@ select.text-input { appearance: auto; }
             <span class="sec-sub tabnum">${s.stats.totalXP} XP</span>
           </div>
           <div class="progress lg" role="progressbar" aria-label="레벨 진행" aria-valuemin="0" aria-valuemax="${lv.need}" aria-valuenow="${lv.into}"><div class="progress-fill" style="width:${(lv.into / lv.need) * 100}%"></div></div>
+          <p class="next-title">${nextTitleHTML(level, s.stats.totalXP)}</p>
         </section>`;
       this.bind(el);
     },
@@ -2495,14 +2521,23 @@ select.text-input { appearance: auto; }
           ${SWAP_REASONS.map((r) => `<button type="button" class="choice" role="radio" aria-checked="false" data-id="${r.id}">
             <span class="choice-text"><span class="choice-title">${r.label}</span><span class="choice-desc">${r.hint}</span></span></button>`).join('')}
         </div>
+        <label class="sr-only" for="swap-note">기타 사유</label>
+        <input id="swap-note" class="text-input sm" type="text" maxlength="${SWAP_NOTE_MAX}" autocomplete="off" placeholder="예: 이번 주는 현장에 나가 있어요 (선택)" hidden>
         ${enough ? '' : `<p class="field-error">💎이 부족해요. 퀘스트를 완료하면 난이도에 따라 💎 ${DIFFICULTY.easy.gems}~${DIFFICULTY.hard.gems}개를 받아요.</p>`}
         <button type="button" class="btn btn-primary" id="swap-go" disabled>💎 ${SWAP_COST}개 사용해서 바꾸기</button>
         <p class="sec-sub center">보유 💎 ${s.stats.gems}개</p>`, '퀘스트 바꾸기');
-      radioGroup(wrap, (id) => { reason = id; $('#swap-go', wrap).disabled = !enough; });
+      const note = $('#swap-note', wrap);
+      radioGroup(wrap, (id) => {
+        reason = id;
+        $('#swap-go', wrap).disabled = !enough;
+        note.hidden = id !== 'other';
+        if (!note.hidden) note.focus();
+      });
       $('#swap-go', wrap).addEventListener('click', () => {
         if (!reason || App.state.stats.gems < SWAP_COST) return;
         const st = App.state;
-        st.swapHistory.push({ date: Clock.today(), at: nowISO(), fromId: q.id, category: q.cat, reason, toId: null });
+        const text = reason === 'other' ? note.value.trim().slice(0, SWAP_NOTE_MAX) : '';
+        st.swapHistory.push({ date: Clock.today(), at: nowISO(), fromId: q.id, category: q.cat, reason, ...(text ? { note: text } : {}), toId: null });
         const nq = Engine.replacement(st, it, reason);
         st.swapHistory[st.swapHistory.length - 1].toId = nq.id;
         st.stats.gems -= SWAP_COST;
@@ -2995,15 +3030,16 @@ select.text-input { appearance: auto; }
 
 
         <section class="sec">
-          <h2 class="sec-title">개발자 도구</h2>
+          <h2 class="sec-title">시연용 도구</h2>
           <div class="demo-box">
+            <p>발표에서 여러 날을 빠르게 보여주기 위한 도구예요. 실제 사용할 때는 자정이 지나면 날짜가 자동으로 넘어가요.</p>
             <p>오늘 날짜(가상): <b>${fmtDay(Clock.today())}</b>${Clock.offset ? ` · 실제보다 +${Clock.offset}일` : ''}</p>
             <div class="demo-toggle">
               <div class="q-main"><b>데모 데이터</b><span class="sec-sub">${demoOn ? '2주 분량 예시 기록을 보는 중이에요. 끄면 내 기록으로 돌아가요' : '켜면 2주 분량 예시 기록으로 바뀌어요. 내 기록은 따로 보관돼요'}</span></div>
               <button type="button" class="switch sm" role="switch" id="demo-toggle" aria-checked="${demoOn}" aria-label="데모 데이터"><span></span></button>
             </div>
             <button type="button" class="btn btn-secondary" data-demo="report">주간 리포트 바로 보기</button>
-            <button type="button" class="btn btn-secondary" data-demo="nextday">날짜 하루 넘기기</button>
+            <button type="button" class="btn btn-secondary" data-demo="nextday">날짜 하루 넘기기 (시연용)</button>
             <button type="button" class="btn btn-secondary" data-demo="reset">전체 초기화</button>
           </div>
         </section>

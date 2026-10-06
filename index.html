@@ -1329,12 +1329,15 @@ select.text-input { appearance: auto; }
       const rand = rng(`${item.uid}|${reason}|${s.swapHistory.length}`);
       return weightedPick(pool, (x) => this.weightOf(x, ctx), rand);
     },
-    // "퀘스트 하나 더 받기": 오늘 퀘스트·최근 3일 완료를 빼고, 오늘 없는 카테고리를 우선해 관심사 가중치로 1개
+    // "퀘스트 하나 더 받기": 오늘 퀘스트·최근 3일 완료를 빼고 관심사 카테고리에서 1개
+    //   관심사로 먼저 좁힌 뒤에 오늘 없는 카테고리를 우선 (순서가 반대면 관심사가 먼저 다 빠짐)
     pickExtra(s) {
       const ctx = this.ctx(s), dq = s.dailyQuests;
       const inToday = new Set(dq.items.map((i) => i.questId));
       const todayCats = new Set(dq.items.map((i) => QMAP[i.questId].cat));
-      const pool = narrow(this.candidates(s, { exclude: new Set([...inToday, ...this.recentDone(s, 3)]), ctx }).filter((q) => !inToday.has(q.id)), (q) => !todayCats.has(q.cat));
+      const interest = new Set(Object.keys(this.interestLinks(s)));
+      let pool = this.candidates(s, { exclude: new Set([...inToday, ...this.recentDone(s, 3)]), ctx }).filter((q) => !inToday.has(q.id));
+      pool = narrow(narrow(pool, (q) => interest.has(q.cat)), (q) => !todayCats.has(q.cat));
       if (!pool.length) return null;
       return weightedPick(pool, (x) => this.weightOf(x, ctx), rng(`${dq.date}|extra|${dq.added || 0}|${s.profile.nickname}`));
     },

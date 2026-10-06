@@ -330,7 +330,15 @@ button { cursor: pointer; }
 .edit-btn:hover { background: var(--accent-soft); }
 
 /* ---------- 웰컴 ---------- */
-.pane.welcome { justify-content: center; align-items: center; text-align: center; gap: 14px; }
+/* 가운데 정렬은 위아래 auto 여백으로: 화면이 낮아 넘치면 위가 잘리지 않고 스크롤된다 */
+.pane.welcome { align-items: center; text-align: center; gap: 14px; }
+.pane.welcome > :first-child { margin-top: auto; }
+.pane.welcome > :last-child { margin-bottom: auto; }
+@media (max-height: 640px) {
+  .pane.welcome { gap: 8px; padding-top: 4px; }
+  .pane.welcome .mascot-wrap.xl { width: 96px; }
+  .pane.welcome .wordmark { font-size: 28px; }
+}
 .wordmark { margin: 6px 0 0; font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.1; color: var(--brand); letter-spacing: .01em; }
 .wordmark span { color: var(--fg); }
 .lede { margin: 0; max-width: 28ch; color: var(--fg-muted); font-size: 17px; word-break: keep-all; text-wrap: balance; }

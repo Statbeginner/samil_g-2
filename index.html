@@ -78,7 +78,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
-button, input { font: inherit; color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -643,7 +643,8 @@ select.text-input { appearance: auto; }
 .hist-date { margin: 6px 0 0; font-family: var(--font-display); font-weight: 400; font-size: 14px; color: var(--fg-muted); }
 .hist-item { --cat: #888; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 2px solid var(--line); }
 .hist-item .xp { flex: none; }
-.hist-note { font-size: 13.5px; color: var(--fg); font-style: italic; word-break: keep-all; }
+.hist-note { font-size: 13.5px; color: var(--fg); font-style: italic; word-break: keep-all; white-space: pre-wrap; }
+.note-input { min-height: 96px; padding: 12px 16px; line-height: 1.5; font-size: 16px; resize: none; }
 .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px; text-align: center; color: var(--fg-muted); }
 .empty p { margin: 0; }
 .report-bubble { display: flex; flex-direction: column; gap: 6px; font-size: 17px; }
@@ -1179,6 +1180,16 @@ select.text-input { appearance: auto; }
     5: '담당자님의 시간을 아껴드린다는 마음으로, 용건부터 짧게 말해보세요.',
   };
   const SOLO_TIP = '혼자 바로 할 수 있어요. 5분만 내서 지금 바로 해봐요.';
+  // 완료할 때 한 줄 기록: 함께하는 퀘스트 전부 + 사진·적기 퀘스트. 행동만 하는 혼자 퀘스트(스트레칭 등)는 바로 완료
+  const NOTE_PHOTO = new Set(['Q134']);
+  const NOTE_WRITE = new Set(['Q102', 'Q024', 'Q025', 'Q042', 'Q056', 'Q144', 'Q092', 'Q094', 'Q095', 'Q096']);
+  const NOTE_PROMPTS = {
+    together: { label: '누구와 무엇을 했나요?', placeholder: '예: 김선배님과 점심, 근처 국밥집 추천받음' },
+    photo: { label: '어떤 순간을 남겼나요?', placeholder: '예: 퇴근길 노을이 예뻐서 한 장' },
+    write: { label: '적은 내용을 여기에 남겨보세요', placeholder: '퀘스트에서 적은 내용을 그대로 옮겨도 좋아요' },
+  };
+  const NOTE_MIN = 2, NOTE_MAX = 100;
+  const noteKind = (q) => (q.together ? 'together' : NOTE_PHOTO.has(q.id) ? 'photo' : NOTE_WRITE.has(q.id) ? 'write' : null);
   const QUESTS = QUEST_ROWS.map(([id, cat, stage, title, minutes, together, sub]) => {
     const difficulty = difficultyOf(stage, minutes);
     return {
@@ -1573,14 +1584,14 @@ select.text-input { appearance: auto; }
       s.questHistory.push({ kind: 'step', uid: item.uid, questId: item.questId, category: QMAP[item.questId].cat, date: Clock.today(), completedAt: nowISO(), xp: STEP_XP, step: i });
       return { before, after: this.snapshot(s), doneCount: item.steps.filter((x) => x.done).length };
     },
-    completeQuest(s, item) {
+    completeQuest(s, item, note = '') {
       const q = QMAP[item.questId];
       const before = this.snapshot(s);
       this.award(s, q.xp, { gems: q.gems });
       item.status = 'done'; item.completedAt = nowISO();
       s.questHistory.push({
         kind: 'quest', uid: item.uid, questId: q.id, title: q.title, category: q.cat, stage: q.stage, together: q.together,
-        xp: q.xp, date: Clock.today(), completedAt: nowISO(),
+        xp: q.xp, date: Clock.today(), completedAt: nowISO(), ...(note ? { note } : {}),
       });
       const after = this.snapshot(s);
       const newBadges = Badges.check(s);
@@ -2610,6 +2621,7 @@ select.text-input { appearance: auto; }
           </dl>
           <div class="talk">${mascot('sm')}<p class="bubble small">${esc(q.tip)}</p></div>
           ${it.reason ? `<p class="q-reason">추천 이유 · ${esc(it.reason)}</p>` : ''}
+          ${noteKind(q) && !done ? `<p class="sec-sub">✍️ 완료할 때 "${NOTE_PROMPTS[noteKind(q)].label}" 한 줄을 남겨요</p>` : ''}
           ${this.badgeHint(q)}
           <section class="split" aria-label="작게 쪼갠 단계">${this.splitHTML(it, q)}</section>
         </div>
@@ -2730,12 +2742,18 @@ select.text-input { appearance: auto; }
   // "완료했어요" → 바로 기록하고 축하
   const Complete = {
     busy: false,
-    async open(it) {
+    open(it) {
       if (this.busy) return;
       const cur = App.state.dailyQuests.items.find((i) => i.uid === it.uid);
       if (!cur || cur.status === 'done') return;
+      const kind = noteKind(QMAP[cur.questId]);
+      if (kind) NoteSheet.open(cur, kind, (note) => this.finish(cur, note));
+      else this.finish(cur);
+    },
+    async finish(cur, note) {
+      if (this.busy || cur.status === 'done') return;
       this.busy = true;
-      const res = Progress.completeQuest(App.state, cur);
+      const res = Progress.completeQuest(App.state, cur, note);
       App.commit();
       Detail.close();
       Main.render();
@@ -2744,6 +2762,32 @@ select.text-input { appearance: auto; }
       for (const b of res.newBadges || []) await BadgeWin.show(b);
       this.busy = false;
       Main.render();
+    },
+  };
+
+  // 완료 직전 한 줄 기록 (2자 이상이어야 완료)
+  const NoteSheet = {
+    open(it, kind, done) {
+      const q = QMAP[it.questId], pr = NOTE_PROMPTS[kind];
+      const wrap = Sheet.open(`
+        <h2 class="sheet-title">✍️ ${pr.label}</h2>
+        <p class="sec-sub">${esc(q.title)}</p>
+        <label class="sr-only" for="note-in">${pr.label}</label>
+        <textarea id="note-in" class="text-input note-input" rows="3" maxlength="${NOTE_MAX}" placeholder="${esc(pr.placeholder)}" data-autofocus></textarea>
+        <div class="field-meta"><p class="field-error"></p><span class="counter" id="note-cnt">0/${NOTE_MAX}</span></div>
+        <button type="button" class="btn btn-primary" id="note-go" disabled>완료하기</button>
+        <p class="fine">기록은 이 브라우저에만 저장되고, 기록 탭에서 다시 볼 수 있어요</p>`, '한 줄 기록');
+      const input = $('#note-in', wrap), go = $('#note-go', wrap);
+      input.addEventListener('input', () => {
+        $('#note-cnt', wrap).textContent = `${charLen(input.value)}/${NOTE_MAX}`;
+        go.disabled = charLen(input.value.trim()) < NOTE_MIN;
+      });
+      go.addEventListener('click', () => {
+        const v = input.value.trim();
+        if (charLen(v) < NOTE_MIN) return;
+        Overlay.pop(wrap);
+        done(v);
+      });
     },
   };
 
@@ -2926,7 +2970,7 @@ select.text-input { appearance: auto; }
             <div class="hist-day"><h3 class="hist-date">${fmtDay(d)}${d === Clock.today() ? ' · 오늘' : ''}</h3>
               ${hs.map((h) => `<div class="hist-item" style="${catVar(h.category)}">
                 <span class="cat-icon sm" aria-hidden="true">${CATEGORIES[h.category].emoji}</span>
-                <span class="q-main"><span class="q-title sm">${esc(h.title)}</span></span>
+                <span class="q-main"><span class="q-title sm">${esc(h.title)}</span>${h.note ? `<span class="hist-note">"${esc(h.note)}"</span>` : ''}</span>
                 <span class="xp">+${h.xp}</span></div>`).join('')}
             </div>`).join('') : `<div class="empty">${mascot('sm')}<p>${quests.length && f !== 'all' ? `아직 완료한 ${CATEGORIES[f].label} 퀘스트가 없어요.<br>‹ › 를 눌러 다른 카테고리도 넘겨보세요` : '아직 완료한 퀘스트가 없어요.<br>홈에서 ⚡ 빠른 퀘스트부터 시작해보세요!'}</p></div>`}
         </section>`;
@@ -3010,9 +3054,13 @@ select.text-input { appearance: auto; }
       [7, 'Q014'], [5, 'Q053'], [5, 'Q135'], [4, 'Q001'], [3, 'Q113'], [3, 'Q117'], [2, 'Q026'],
       [1, 'Q148'], [1, 'Q121'], [1, 'Q067'],
     ];
+    const demoNotes = {
+      Q067: '박동료님이 추천해준 드라마, 이번 주말에 보기로 함', Q121: '팀 동료에게 엑셀 Ctrl+Shift+L 필터 단축키 배움',
+      Q148: '동료 추천으로 다음 주 타운홀 신청', Q026: '동기랑 리스 회계기준 이슈 3분씩 공유',
+    };
     plan.forEach(([ago, id], i) => {
       const q = QMAP[id], date = addDays(today, -ago);
-      s.questHistory.push({ kind: 'quest', uid: `demo-${i}`, questId: id, title: q.title, category: q.cat, stage: q.stage, together: q.together, xp: q.xp, date, completedAt: `${date}T12:00:00.000Z` });
+      s.questHistory.push({ kind: 'quest', uid: `demo-${i}`, questId: id, title: q.title, category: q.cat, stage: q.stage, together: q.together, xp: q.xp, date, completedAt: `${date}T12:00:00.000Z`, ...(demoNotes[id] ? { note: demoNotes[id] } : {}) });
       s.stats.dailyXP[date] = (s.stats.dailyXP[date] || 0) + q.xp;
       s.stats.totalXP += q.xp;
     });

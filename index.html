@@ -1027,9 +1027,8 @@ select.text-input { appearance: auto; }
     3: { target: '선배',          short: '선배' },
     4: { target: '타본부 구성원', short: '타본부' },
   };
-  const DIFFICULTY = { easy: { label: '쉬움', xp: 10 }, normal: { label: '보통', xp: 20 }, hard: { label: '도전', xp: 40 } };
+  const DIFFICULTY = { easy: { label: '쉬움', xp: 10, gems: 5 }, normal: { label: '보통', xp: 20, gems: 7 }, hard: { label: '도전', xp: 40, gems: 10 } };
   const STEP_XP = 0;   // 쪼갠 단계는 XP 없음 (퀘스트를 끝내야 XP)
-  const GEMS_PER_QUEST = 5;
   const SWAP_COST = 10;
   const START_GEMS = 30;
   const REQUEST_LIMIT = 3;
@@ -1167,7 +1166,7 @@ select.text-input { appearance: auto; }
       id, cat, stage, title, minutes, together, sub, quick: minutes <= 5,
       ask: CATEGORIES[cat].ask, tip: together ? TARGET_TIPS[stage] : SOLO_TIP,
       desc: together ? `${TARGETS[stage].target}${josaWa(TARGETS[stage].target)} 함께하는 미션이에요.` : '혼자 바로 할 수 있는 미션이에요.',
-      difficulty, xp: DIFFICULTY[difficulty].xp,
+      difficulty, xp: DIFFICULTY[difficulty].xp, gems: DIFFICULTY[difficulty].gems,
     };
   });
   const targetLabel = (q) => (q.together ? TARGETS[q.stage].target : '혼자');
@@ -1679,7 +1678,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     completeQuest(s, item) {
       const q = QMAP[item.questId];
       const before = this.snapshot(s);
-      this.award(s, q.xp, { gems: GEMS_PER_QUEST });
+      this.award(s, q.xp, { gems: q.gems });
       item.status = 'done'; item.completedAt = nowISO();
       s.questHistory.push({
         kind: 'quest', uid: item.uid, questId: q.id, title: q.title, category: q.cat, stage: q.stage, together: q.together,
@@ -1687,7 +1686,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       });
       const after = this.snapshot(s);
       const newBadges = Badges.check(s);
-      return { q, before, after, gems: GEMS_PER_QUEST, newBadges };
+      return { q, before, after, gems: q.gems, newBadges };
     },
   };
 
@@ -2694,7 +2693,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           ${SWAP_REASONS.map((r) => `<button type="button" class="choice" role="radio" aria-checked="false" data-id="${r.id}">
             <span class="choice-text"><span class="choice-title">${r.label}</span><span class="choice-desc">${r.hint}</span></span></button>`).join('')}
         </div>
-        ${enough ? '' : `<p class="field-error">💎이 부족해요. 퀘스트를 완료하면 💎 ${GEMS_PER_QUEST}개를 받아요.</p>`}
+        ${enough ? '' : `<p class="field-error">💎이 부족해요. 퀘스트를 완료하면 난이도에 따라 💎 ${DIFFICULTY.easy.gems}~${DIFFICULTY.hard.gems}개를 받아요.</p>`}
         <button type="button" class="btn btn-primary" id="swap-go" disabled>💎 ${SWAP_COST}개 사용해서 바꾸기</button>
         <p class="sec-sub center">보유 💎 ${s.stats.gems}개</p>`, '퀘스트 바꾸기');
       radioGroup(wrap, (id) => { reason = id; $('#swap-go', wrap).disabled = !enough; });
@@ -2758,7 +2757,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
             <div><dt>카테고리</dt><dd>${c.label}</dd></div>
             <div><dt>난이도</dt><dd>${DIFFICULTY[q.difficulty].label}</dd></div>
             <div><dt>예상 시간</dt><dd>${q.minutes}분</dd></div>
-            <div><dt>획득 XP</dt><dd class="xp">+${q.xp} XP</dd></div>
+            <div><dt>보상</dt><dd class="xp">+${q.xp} XP · 💎${q.gems}</dd></div>
             <div class="wide"><dt>대상</dt><dd>${q.together ? TARGETS[q.stage].target : '혼자'}</dd></div>
           </dl>
           <div class="talk">${mascot('sm')}<p class="bubble small">${esc(q.tip)}</p></div>
@@ -3186,7 +3185,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     Badges.check(s);
     s.badges.earned.forEach((e, i) => { e.date = addDays(today, -(12 - i * 11)); });
     s.stats.streak = 5; s.stats.bestStreak = 5; s.stats.lastActiveDate = addDays(today, -1);
-    s.stats.gems = START_GEMS + plan.length * GEMS_PER_QUEST - 2 * SWAP_COST;
+    s.stats.gems = START_GEMS + plan.reduce((sum, [, id]) => sum + QMAP[id].gems, 0) - 2 * SWAP_COST;
     s.meta.reportAutoWeek = weekStartKey(today);
     return s;
   }

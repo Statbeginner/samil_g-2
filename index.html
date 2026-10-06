@@ -716,6 +716,11 @@ select.text-input { appearance: auto; }
 }
 .badge-tile:active { transform: translateY(3px); box-shadow: none; }
 .badge-tile.earned { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); background: color-mix(in srgb, var(--gold-soft) 55%, var(--surface)); }
+.badge-tile.featured { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold), 0 3px 0 var(--line); }
+.feat-chip {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin-top: 4px; padding: 2px 10px 2px 7px; border-radius: 999px;
+  background: var(--gold-soft); color: var(--gold-fg); font-family: var(--font-display); font-size: 13px; line-height: 1.5; word-break: keep-all;
+}
 .bt-name { font-family: var(--font-display); font-size: 14px; line-height: 1.3; word-break: keep-all; }
 .bt-sub { font-size: 12px; color: var(--fg-muted); min-height: 16px; }
 .badge-tile.earned .bt-sub { color: var(--gold-fg); font-family: var(--font-display); }
@@ -1629,6 +1634,9 @@ select.text-input { appearance: auto; }
   const BADGE_MAP = Object.fromEntries(BADGES.map((b) => [b.id, b]));
   const Badges = {
     earnedIds(s) { return new Set((Array.isArray(s.badges?.earned) ? s.badges.earned : []).map((e) => e.id)); },
+    // 대표 배지: 프로필·홈에 거는 배지 하나 (얻은 배지만)
+    featured(s) { const id = s.badges?.featured; return id && this.earnedIds(s).has(id) ? BADGE_MAP[id] : null; },
+    setFeatured(s, id) { s.badges.featured = id || null; },
     // 카테고리별로 완료한 서로 다른 미션 (먼저 완료한 순서로 최대 4칸) { 1: {id, title} | null, ... }
     stages(s, cat) {
       const out = { 1: null, 2: null, 3: null, 4: null };
@@ -2481,7 +2489,7 @@ select.text-input { appearance: auto; }
         <section class="card level-card" aria-labelledby="h-level">
           <div class="lv-row">
             <div class="lv-badge"><small>Lv.</small>${level}</div>
-            <div class="lv-text"><h2 class="lv-title" id="h-level">${titleOf(level)}</h2><p class="sec-sub">다음 레벨까지 ${lv.need - lv.into} XP</p></div>
+            <div class="lv-text"><h2 class="lv-title" id="h-level">${titleOf(level)}</h2><p class="sec-sub">다음 레벨까지 ${lv.need - lv.into} XP</p>${featChip(s)}</div>
             <span class="sec-sub tabnum">${s.stats.totalXP} XP</span>
           </div>
           <div class="progress lg" role="progressbar" aria-label="레벨 진행" aria-valuemin="0" aria-valuemax="${lv.need}" aria-valuenow="${lv.into}"><div class="progress-fill" style="width:${(lv.into / lv.need) * 100}%"></div></div>
@@ -2797,30 +2805,46 @@ select.text-input { appearance: auto; }
         <button type="button" class="btn btn-primary" data-continue>좋아요!</button>`, '레벨 업');
     },
   };
+  const featChip = (s) => { const f = Badges.featured(s); return f ? `<span class="feat-chip" title="대표 배지"><span aria-hidden="true">${f.emoji}</span>${esc(f.name)}</span>` : ''; };
   function badgeMedal(b, earned, size = '') {
     return `<span class="medal ${size} ${earned ? '' : 'locked'}" style="--cat:${b.color}" aria-hidden="true"><span class="medal-emoji">${b.emoji}</span>${earned ? '' : '<span class="medal-lock">🔒</span>'}</span>`;
   }
   const BadgeWin = {
     show(b) {
-      return fullScreen(`
+      const p = fullScreen(`
         ${badgeMedal(b, true, 'xl')}
         <p class="cel-label">배지 획득!</p>
         <p class="badge-big-name">${esc(b.name)}</p>
         <p class="badge-msg">${esc(b.message)}</p>
-        <button type="button" class="btn btn-primary" data-continue>컬렉션에 담기</button>`, '배지 획득');
+        <button type="button" class="btn btn-primary" data-continue>컬렉션에 담기</button>
+        <button type="button" class="btn-text" data-feature>🏅 대표 배지로 걸기</button>`, '배지 획득');
+      const btn = Celebration.lastEl.querySelector('[data-feature]');
+      btn.addEventListener('click', () => {
+        Badges.setFeatured(App.state, b.id); App.commit();
+        btn.textContent = '대표 배지로 걸었어요 ✓'; btn.disabled = true;
+      });
+      return p;
     },
   };
   const BadgeSheet = {
     open(id) {
       const s = App.state, b = BADGE_MAP[id], p = Badges.progress(s, b);
       const rec = (s.badges.earned || []).find((e) => e.id === id);
-      Sheet.open(`
+      const isF = Badges.featured(s)?.id === id;
+      const wrap = Sheet.open(`
         <div class="badge-sheet-top">${badgeMedal(b, !!rec, 'lg')}
           <div><h2 class="sheet-title">${esc(b.name)}</h2><p class="sec-sub">${rec ? `${fmtDay(rec.date)} 획득` : `진행 ${p.done}/${p.total}`}</p></div></div>
         <p class="badge-msg left">${rec ? esc(b.message) : esc(b.rule)}</p>
         ${b.kind === 'category' ? `<ul class="badge-stages">${[1, 2, 3, 4].map((n) => `<li class="${p.stages[n] ? 'on' : ''}">
             <span class="bs-check" aria-hidden="true">${p.stages[n] ? '✓' : n}</span>
-            <span class="q-main"><b>${n}번째 미션</b><span class="sec-sub">${p.stages[n] ? esc(p.stages[n].title) : '아직이에요'}</span></span></li>`).join('')}</ul>` : ''}`, '배지 상세');
+            <span class="q-main"><b>${n}번째 미션</b><span class="sec-sub">${p.stages[n] ? esc(p.stages[n].title) : '아직이에요'}</span></span></li>`).join('')}</ul>` : ''}
+        ${rec ? `<button type="button" class="btn ${isF ? 'btn-secondary' : 'btn-primary'}" data-feature>${isF ? '대표 배지에서 내리기' : '🏅 대표 배지로 걸기'}</button>
+          <p class="sec-sub center">대표 배지는 홈의 레벨 카드와 프로필에 보여요</p>` : ''}`, '배지 상세');
+      wrap.querySelector('[data-feature]')?.addEventListener('click', () => {
+        Badges.setFeatured(s, isF ? null : id); App.commit();
+        Overlay.pop(wrap); Main.render();
+        toast(isF ? '대표 배지를 내렸어요' : `'${b.name}'을 대표 배지로 걸었어요`);
+      });
     },
   };
 
@@ -2881,11 +2905,12 @@ select.text-input { appearance: auto; }
         </section>
         <section class="sec" aria-labelledby="h-badges">
           <div class="sec-head"><h2 class="sec-title" id="h-badges">배지 컬렉션</h2><span class="sec-sub">${Badges.earnedIds(s).size}/${BADGES.length} 획득</span></div>
+          ${Badges.earnedIds(s).size ? '<p class="sec-sub">얻은 배지를 누르면 대표 배지로 걸 수 있어요</p>' : ''}
           <div class="badge-grid">${BADGES.map((b) => {
-            const earned = Badges.earnedIds(s).has(b.id), pr = Badges.progress(s, b);
-            return `<button type="button" class="badge-tile ${earned ? 'earned' : ''}" data-badge="${b.id}" aria-label="${esc(b.name)} ${earned ? '획득' : `진행 ${pr.done}/${pr.total}`}">
+            const earned = Badges.earnedIds(s).has(b.id), pr = Badges.progress(s, b), feat = Badges.featured(s)?.id === b.id;
+            return `<button type="button" class="badge-tile ${earned ? 'earned' : ''} ${feat ? 'featured' : ''}" data-badge="${b.id}" aria-label="${esc(b.name)} ${feat ? '대표 배지' : earned ? '획득' : `진행 ${pr.done}/${pr.total}`}">
               ${badgeMedal(b, earned)}<span class="bt-name">${esc(b.name)}</span>
-              <span class="bt-sub">${earned ? '획득!' : b.kind === 'category' ? `<span class="pips">${[1, 2, 3, 4].map((n) => `<i class="${pr.stages[n] ? 'on' : ''}"></i>`).join('')}</span>` : '0/1'}</span></button>`;
+              <span class="bt-sub">${feat ? '🏅 대표 배지' : earned ? '획득!' : b.kind === 'category' ? `<span class="pips">${[1, 2, 3, 4].map((n) => `<i class="${pr.stages[n] ? 'on' : ''}"></i>`).join('')}</span>` : '0/1'}</span></button>`;
           }).join('')}</div>
         </section>
         <section class="sec">
@@ -3013,7 +3038,7 @@ select.text-input { appearance: auto; }
       const s = App.state, p = s.profile, demoOn = !!s.meta.demoMode;
       el.innerHTML = `
         <section class="card">
-          <div class="profile-row">${mascot('sm')}<div class="q-main"><b class="sec-title sm">${esc(p.nickname)}</b><span class="sec-sub">${esc(divisionOf(p.division)?.label || '-')} · ${esc(p.team)} · 입사 ${tenureMonth(p.joinMonth)}개월차</span></div></div>
+          <div class="profile-row">${mascot('sm')}<div class="q-main"><b class="sec-title sm">${esc(p.nickname)}</b><span class="sec-sub">${esc(divisionOf(p.division)?.label || '-')} · ${esc(p.team)} · 입사 ${tenureMonth(p.joinMonth)}개월차</span>${featChip(s)}</div></div>
           <button type="button" class="btn btn-secondary" id="edit-profile">프로필 수정</button>
         </section>
 

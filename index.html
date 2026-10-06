@@ -409,8 +409,6 @@ button { cursor: pointer; }
 .btn-row.n3 > :last-child { grid-column: 1 / -1; }
 .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--fg-muted); font-family: var(--font-display); font-size: 12px; line-height: 1.5; }
 .pill.quick { background: var(--gold-soft); color: var(--gold-fg); }
-.src-tag { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 6px; background: var(--surface-2); color: var(--fg-muted); font-family: var(--font-display); font-size: 11px; vertical-align: 1px; }
-.src-tag.ai { background: var(--accent-soft); color: var(--accent); }
 .banner { margin: 0; padding: 12px 14px; border-radius: 14px; font-family: var(--font-display); font-size: 15px; line-height: 1.4; }
 .banner.ok { background: var(--success-soft); color: var(--success); }
 .banner.accent { background: var(--accent-soft); color: var(--accent); }
@@ -510,16 +508,9 @@ button { cursor: pointer; }
 .ask-row .text-input { flex: 1; min-width: 0; }
 .req-result { display: flex; flex-direction: column; gap: 10px; }
 .req-note { margin: 0; font-size: 14px; color: var(--fg-muted); }
-.req-note .src-tag { margin: 0 4px 0 0; }
 .mini-q { --cat: #888; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: var(--surface-2); }
 .mini-q .q-main { flex: 1 1 160px; }
 .mini-q .btn { margin-left: auto; }
-.thinking { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-family: var(--font-display); color: var(--fg-muted); }
-.dots { display: inline-flex; gap: 3px; margin-left: 4px; }
-.dots i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: dot 1s infinite; }
-.dots i:nth-child(2) { animation-delay: .15s; }
-.dots i:nth-child(3) { animation-delay: .3s; }
-@keyframes dot { 0%, 100% { opacity: .2; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
 
 .level-card { gap: 12px; }
 .lv-row { display: flex; align-items: center; gap: 14px; }
@@ -648,7 +639,6 @@ select.text-input { appearance: auto; }
 .report-bubble { display: flex; flex-direction: column; gap: 6px; font-size: 17px; }
 .report-bubble p { margin: 0; }
 .report-bubble .next { font-family: var(--font-body); font-size: 15px; color: var(--accent); }
-.report-bubble .src-tag { align-self: flex-start; margin: 0; }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tiles .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .tile { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 18px; background: var(--surface); border: 2px solid var(--line); min-width: 0; }
@@ -1196,45 +1186,9 @@ select.text-input { appearance: auto; }
   ];
 
   /* =========================================================
-   * 12. AI 어댑터 — Claude 아티팩트에서는 실제 AI, 그 외엔 null → 기본 로직
-   * ========================================================= */
-  const AI = {
-    promise: null,
-    off: false,
-    failures: 0,
-    get() {
-      if (!this.promise) {
-        const c = window.claude;
-        this.promise = (c && typeof c.use === 'function')
-          ? Promise.resolve().then(() => c.use('sample')).catch(() => null)
-          : Promise.resolve(null);
-      }
-      return this.promise;
-    },
-    async json(prompt) {
-      if (this.off) throw { code: 'off' };
-      const sample = await this.get();
-      if (!sample || typeof sample.json !== 'function') throw { code: 'unavailable' };
-      try {
-        const out = await sample.json(prompt, { modelTier: 'quick' });
-        this.failures = 0;
-        return out;
-      } catch (e) {
-        this.failures += 1;
-        const code = e && e.code;
-        if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'session_expired'].includes(code)) this.off = true;
-        throw e || { code: 'upstream_error' };
-      }
-    },
-  };
-  const AI_PERSONA = '너는 회계법인 입사 1년차 공인회계사(Associate)의 사내 적응을 돕는 게임형 앱의 마스코트 "삼일이"야. 따뜻하고 가볍지만 회사에서 써도 어색하지 않은 한국어 존댓말을 써.';
-  const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-
-  /* =========================================================
    * 13. 추천 엔진 (관심사 · 교체 이유 반영)
    * ========================================================= */
   const doneQuestCount = (s) => s.questHistory.filter((h) => h.kind === 'quest').length;
-  const questLine = (q) => `${q.id}|${CATEGORIES[q.cat].label}|${targetLabel(q)}|${q.minutes}분|${q.together ? '함께' : '혼자'}|${q.title}`;
 
   const Engine = {
     catsForInterest(label) {
@@ -1320,7 +1274,7 @@ select.text-input { appearance: auto; }
         uid: `${date}-${slot}-${q.id}-${hashStr(q.id + Math.random()).toString(36).slice(0, 4)}`,
         questId: q.id, slot, status: 'todo', source,
         reason: reason || this.reasonFor(s, q, slot),
-        steps: null, stepsSource: null, startedAt: null, completedAt: null,
+        steps: null, startedAt: null, completedAt: null,
       };
     },
     reasonFor(s, q, slot) {
@@ -1342,7 +1296,7 @@ select.text-input { appearance: auto; }
       const rand = rng(`${item.uid}|${reason}|${s.swapHistory.length}`);
       return weightedPick(pool, (x) => this.weightOf(x, ctx), rand);
     },
-    // "삼일이에게 요청하기" — AI 없이도 동작하는 키워드 매칭
+    // "삼일이에게 요청하기" — 키워드 매칭
     matchRequest(s, text) {
       const t = text;
       let max = null;
@@ -1406,88 +1360,6 @@ select.text-input { appearance: auto; }
         { text: q.title, minutes: q.minutes },
         { text: '끝나고 느낀 점 한 줄 남기기', minutes: 1 },
       ];
-    },
-    profileBrief(s) {
-      const p = s.profile;
-      return `닉네임 ${p.nickname}, ${divisionOf(p.division)?.label || ''} ${p.team}, 입사 ${tenureMonth(p.joinMonth)}개월차, 관심사: ${p.interests.join(', ')}, 네트워킹 성향: ${styleOf(p.networkingStyle)?.label || '-'}`;
-    },
-  };
-
-  /* AI 프롬프트 + 결과 검증 (실패하면 호출한 쪽에서 기본 로직 사용) */
-  const AIQuest = {
-    async daily(s) {
-      const ctx = Engine.ctx(s);
-      const pool = Engine.candidates(s, { exclude: Engine.recentDone(s, 7), ctx });
-      const swaps = s.swapHistory.slice(-5).map((x) => `${QMAP[x.fromId]?.title || x.fromId}: ${SWAP_REASONS.find((r) => r.id === x.reason)?.label}`).join(' / ') || '없음';
-      const res = await AI.json(`${AI_PERSONA}
-오늘의 퀘스트 3개를 아래 미션 목록에서만 골라줘.
-- 2개는 사용자의 관심사 카테고리에서, 1개는 관심사 밖의 새로운 카테고리에서
-- 3개 중 1개 이상은 5분 이내 미션
-- 최근 교체 이유를 반영해
-사용자: ${Engine.profileBrief(s)}
-최근 교체 이유: ${swaps}
-[미션] (id|카테고리|대상|시간|방식|미션)
-${pool.map(questLine).join('\n')}
-JSON으로만 답해: {"ids":["id","id","id"],"reasons":{"id":"25자 이내 추천 이유"}}`);
-      const ids = Array.isArray(res?.ids) ? [...new Set(res.ids)].filter((id) => QMAP[id] && pool.includes(QMAP[id])) : [];
-      if (ids.length !== 3 || !ids.some((id) => QMAP[id].quick)) throw { code: 'invalid' };
-      const reasons = res.reasons || {};
-      return ids.map((id) => ({ q: QMAP[id], slot: QMAP[id].quick ? 'quick' : 'main', reason: str(reasons[id], 40) }));
-    },
-    async request(s, text) {
-      const inToday = new Set(s.dailyQuests.items.map((i) => i.questId));
-      const cands = QUESTS.filter((q) => !inToday.has(q.id));
-      const res = await AI.json(`${AI_PERSONA}
-사용자가 이렇게 요청했어: "${text.slice(0, 200)}"
-아래 후보에서 요청에 가장 잘 맞는 퀘스트를 1~3개 골라줘. 시간 조건이 있으면 반드시 지켜.
-사용자: ${Engine.profileBrief(s)}
-[후보] (id|카테고리|대상|시간|방식|제목)
-${cands.map(questLine).join('\n')}
-JSON으로만 답해: {"note":"어떤 기준으로 골랐는지 30자 이내","picks":[{"id":"id","reason":"25자 이내 이유"}]}`);
-      const seen = new Set();
-      const picks = (Array.isArray(res?.picks) ? res.picks : [])
-        .filter((p) => p && QMAP[p.id] && !inToday.has(p.id) && !seen.has(p.id) && seen.add(p.id))
-        .slice(0, 3)
-        .map((p) => ({ id: p.id, reason: str(p.reason, 40) || Engine.reasonFor(s, QMAP[p.id], 'main') }));
-      if (!picks.length) throw { code: 'invalid' };
-      return { picks, note: str(res.note, 60) || '요청에 맞춰 골랐어요' };
-    },
-    async split(s, q) {
-      const res = await AI.json(`${AI_PERSONA}
-신입 회계사가 아래 퀘스트를 해보고 싶지만 행동으로 옮기기 부담스러워해. 바로 실행할 수 있는 작은 단계 2~4개로 나눠줘.
-규칙: 첫 단계는 반드시 2분 안에 끝나는 아주 쉬운 행동. 마지막 단계는 퀘스트 자체를 해내는 것. 각 단계는 30자 이내 한국어 행동 문장.
-퀘스트: ${q.title} / 설명: ${q.desc} / 대상: ${TARGETS[q.stage].target} / 예상 ${q.minutes}분
-JSON으로만 답해: {"steps":[{"text":"...","minutes":2}]}`);
-      const steps = (Array.isArray(res?.steps) ? res.steps : [])
-        .map((x) => ({ text: str(x?.text, 60), minutes: Math.max(1, Math.min(120, Math.round(Number(x?.minutes) || 5))) }))
-        .filter((x) => x.text);
-      if (steps.length < 2 || steps.length > 4) throw { code: 'invalid' };
-      steps[0].minutes = Math.min(2, steps[0].minutes);
-      return steps;
-    },
-    async openers(s, q, o) {
-      const rank = { associate: 'Associate(비슷한 연차)', senior: 'Senior', manager: 'Manager 이상' }[o.rank];
-      const res = await AI.json(`${AI_PERSONA}
-회사 ${o.channel === 'messenger' ? '사내 메신저로 보낼' : '대면으로 건넬'} 첫마디를 3가지 톤으로 써줘.
-보내는 사람: ${Engine.profileBrief(s)}
-상대: ${rank}, ${TARGETS[q.stage].target}, ${o.known ? '아는 사이' : '처음 연락하는 사이'}
-목적(퀘스트): ${q.title} — ${q.desc}
-규칙: 자연스러운 존댓말, 각 2~4문장, 상대가 부담 없이 거절할 수 있는 여지를 남길 것, 상대 이름은 모르니 호칭은 '선배님' '매니저님' 등으로(Associate면 호칭 없이 인사), 이모지는 friendly에만 최대 1개.
-JSON으로만 답해: {"polite":"정중하게","friendly":"친근하게","short":"짧고 가볍게"}`);
-      const out = { polite: str(res?.polite, 400), friendly: str(res?.friendly, 400), short: str(res?.short, 300) };
-      if (!out.polite || !out.friendly || !out.short) throw { code: 'invalid' };
-      return out;
-    },
-    async weekly(s, sum) {
-      const cats = Object.entries(sum.byCat).map(([c, n]) => `${CATEGORIES[c].label} ${n}`).join(', ') || '없음';
-      const res = await AI.json(`${AI_PERSONA}
-이번 주 활동을 보고 한 줄 코멘트와 다음 주 추천 방향을 써줘.
-사용자: ${Engine.profileBrief(s)}
-이번 주: 완료 퀘스트 ${sum.quests}개, 획득 ${sum.xp}XP, 함께한 퀘스트 ${sum.people}개, 카테고리별 ${cats}
-JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이내 다음 주 추천 방향"}`);
-      const out = { comment: str(res?.comment, 80), next: str(res?.next, 80) };
-      if (!out.comment || !out.next) throw { code: 'invalid' };
-      return out;
     },
   };
 
@@ -1802,7 +1674,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       profile,
       interestHistory: [{ date: Clock.today(), interests: [...(profile.interests || [])] }],
       stats: { totalXP: 0, level: 1, streak: 0, bestStreak: 0, lastActiveDate: null, gems: START_GEMS, dailyXP: {} },
-      dailyQuests: { date: null, items: [], added: 0, source: 'rule', aiTried: false },
+      dailyQuests: { date: null, items: [], added: 0 },
       questHistory: [],   // { kind: 'quest' | 'step', questId, title, category, xp, date, note, partnerDivision, ... }
       swapHistory: [],    // { date, fromId, toId, category, reason }
       weeklyReports: {},  // { 'YYYY-MM-DD(월요일)': { quests, xp, people, newDivisions, byCat, comment } }
@@ -2417,10 +2289,8 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       } catch (e2) { return false; }
     }
   }
-  const thinking = (msg) => `<div class="thinking" role="status">${mascot('xs')}<span>${msg}<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span></div>`;
   const statusLabel = { todo: '대기', doing: '진행 중', done: '완료' };
   const catVar = (c) => `--cat:${CATEGORIES[c].color}`;
-  const sourceTag = (src) => (src === 'ai' ? '<span class="src-tag ai">AI 맞춤</span>' : '<span class="src-tag">기본 추천</span>');
 
   /* =========================================================
    * 18. 메인 셸 (상태바 · 탭바 · 탭 전환)
@@ -2429,7 +2299,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     tab: 'home',
     histFilter: 'all',
     histScroll: 0,
-    req: { text: '', loading: false, result: null },
+    req: { text: '', result: null },
     bound: false,
 
     enter(tab = 'home') {
@@ -2443,7 +2313,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       this.render();
       $('#main-scroll').scrollTop = 0;
       this.maybeAutoReport();
-      this.maybeAIDaily();
     },
     bind() {
       if (this.bound) return;
@@ -2458,8 +2327,8 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       let changed = Progress.checkStreak(s);
       if (s.dailyQuests.date !== t) {
         const prev = s.dailyQuests.items.map((i) => i.questId);
-        s.dailyQuests = { date: t, items: Engine.pickDaily(s, t, prev), added: 0, source: 'rule', aiTried: false };
-        this.req = { text: '', loading: false, result: null };
+        s.dailyQuests = { date: t, items: Engine.pickDaily(s, t, prev), added: 0 };
+        this.req = { text: '', result: null };
         changed = true;
       }
       if (changed) App.commit();
@@ -2486,25 +2355,6 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       s.meta.reportAutoWeek = wk;
       App.commit();
       setTimeout(() => Report.open(wk), 400);
-    },
-    // AI가 오늘의 퀘스트를 고르면, 아직 손대지 않은 경우에만 교체
-    maybeAIDaily() {
-      const s = App.state, dq = s.dailyQuests;
-      if (dq.source !== 'rule' || dq.aiTried) return;
-      const date = dq.date;
-      AI.get().then((sample) => {
-        if (!sample) return;
-        dq.aiTried = true; App.commit();
-        AIQuest.daily(s).then((picks) => {
-          const cur = App.state?.dailyQuests;
-          if (!cur || cur.date !== date || cur.added || cur.items.some((i) => i.status !== 'todo')) return;
-          cur.items = picks.map(({ q, slot, reason }) => Engine.makeItem(App.state, q, slot, date, reason, 'ai'));
-          cur.source = 'ai';
-          App.commit();
-          if (this.tab === 'home' && !Overlay.top()) this.render();
-          toast('삼일이가 오늘의 퀘스트를 맞춤으로 골랐어요');
-        }).catch(() => {});
-      });
     },
   };
 
@@ -2584,7 +2434,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
         <section class="sec" aria-labelledby="h-today">
           <div class="sec-head">
             <h2 class="sec-title" id="h-today">오늘의 퀘스트</h2>
-            <span class="sec-sub">${done}/${dq.items.length} 완료 ${sourceTag(dq.source)}</span>
+            <span class="sec-sub">${done}/${dq.items.length} 완료</span>
           </div>
           <div class="q-list">${dq.items.map(questCardHTML).join('')}</div>
         </section>
@@ -2613,12 +2463,11 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
     },
     requestResultHTML() {
       const r = Main.req, dq = App.state.dailyQuests;
-      if (r.loading) return thinking('삼일이가 퀘스트를 고르는 중');
       if (!r.result) return '';
       const left = REQUEST_LIMIT - (dq.added || 0);
       const inToday = new Set(dq.items.map((i) => i.questId));
       return `<div class="req-result">
-        <p class="req-note">${sourceTag(r.result.source)} ${esc(r.result.note)}</p>
+        <p class="req-note">${esc(r.result.note)}</p>
         ${r.result.picks.map((p) => {
           const q = QMAP[p.id], added = inToday.has(p.id);
           return `<div class="mini-q" style="${catVar(q.cat)}">
@@ -2651,17 +2500,10 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       box.innerHTML = this.requestResultHTML();
       this.bindResult(box);
     },
-    async ask(text) {
+    ask(text) {
       text = (text || '').trim();
       if (!text) { toast('요청 내용을 입력하거나 위의 칩을 눌러주세요.'); $('#ask-input')?.focus(); return; }
-      if (Main.req.loading) return;
-      const s = App.state;
-      Main.req = { text, loading: true, result: null };
-      this.redrawResult();
-      let result;
-      try { result = { ...(await AIQuest.request(s, text)), source: 'ai' }; }
-      catch (e) { result = { ...Engine.matchRequest(s, text), source: 'rule' }; }
-      Main.req = { text, loading: false, result };
+      Main.req = { text, result: Engine.matchRequest(App.state, text) };
       this.redrawResult();
     },
     add(id) {
@@ -2669,7 +2511,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       if ((dq.added || 0) >= REQUEST_LIMIT) { toast('요청 퀘스트는 하루 3개까지 추가할 수 있어요.'); return; }
       if (dq.items.some((i) => i.questId === id)) return;
       const pick = Main.req.result?.picks.find((p) => p.id === id);
-      dq.items.push(Engine.makeItem(s, QMAP[id], 'request', dq.date, pick?.reason, Main.req.result?.source || 'rule'));
+      dq.items.push(Engine.makeItem(s, QMAP[id], 'request', dq.date, pick?.reason));
       dq.added = (dq.added || 0) + 1;
       App.commit();
       Main.render();
@@ -2704,7 +2546,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
         const nq = Engine.replacement(st, it, reason);
         st.swapHistory[st.swapHistory.length - 1].toId = nq.id;
         st.stats.gems -= SWAP_COST;
-        Object.assign(it, { questId: nq.id, status: 'todo', steps: null, stepsSource: null, startedAt: null, source: 'swap', reason: Engine.reasonFor(st, nq, it.slot) });
+        Object.assign(it, { questId: nq.id, status: 'todo', steps: null, startedAt: null, source: 'swap', reason: Engine.reasonFor(st, nq, it.slot) });
         App.commit();
         Overlay.pop(wrap);
         Main.render();
@@ -2717,10 +2559,10 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
    * 20. 퀘스트 상세 · 쪼개기 · 첫마디 · 완료
    * ========================================================= */
   const Detail = {
-    el: null, uid: null, splitting: false,
+    el: null, uid: null,
     item() { return App.state?.dailyQuests.items.find((i) => i.uid === this.uid); },
     open(uid) {
-      this.uid = uid; this.splitting = false;
+      this.uid = uid;
       const el = document.createElement('section');
       el.setAttribute('aria-label', '퀘스트 상세');
       this.el = el;
@@ -2788,13 +2630,12 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
         <span class="chev" aria-hidden="true">›</span></button>`;
     },
     splitHTML(it, q) {
-      if (this.splitting) return thinking('삼일이가 단계를 나누는 중');
       if (!it.steps) return '';
       const n = it.steps.length, d = it.steps.filter((x) => x.done).length;
       let banner = '';
       if (d === 1 && n > 1) banner = '<div class="banner ok">🎉 첫 단계 성공! 여기서 멈춰도 괜찮아요. 진행 상황은 저장돼요.</div>';
       else if (d > 1 && d < n) banner = `<div class="banner ok">${d}단계까지 해냈어요! 남은 단계도 천천히 해봐요.</div>`;
-      return `<div class="sec-head"><h3 class="sec-title sm">작게 쪼갠 단계</h3><span class="sec-sub">${d}/${n} 완료 ${sourceTag(it.stepsSource)}</span></div>
+      return `<div class="sec-head"><h3 class="sec-title sm">작게 쪼갠 단계</h3><span class="sec-sub">${d}/${n} 완료</span></div>
         <ol class="steps">
           ${it.steps.map((x, i) => `<li><label class="step ${x.done ? 'done' : ''}">
             <input type="checkbox" data-step="${i}" ${x.done ? 'checked disabled' : ''}>
@@ -2811,19 +2652,9 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       if (act === 'opener') Opener.open(it);
       if (act === 'complete') Complete.open(it);
     },
-    async split(it) {
-      if (this.splitting) return;
-      const q = QMAP[it.questId];
-      this.splitting = true;
+    split(it) {
       if (it.status === 'todo') { it.status = 'doing'; it.startedAt = nowISO(); }
-      this.render();
-      let steps, source = 'ai';
-      try { steps = await AIQuest.split(App.state, q); }
-      catch (e) { steps = Engine.localSplit(q); source = 'rule'; }
-      this.splitting = false;
-      const cur = this.item() || it;
-      cur.steps = steps.map((x) => ({ ...x, done: false, doneAt: null }));
-      cur.stepsSource = source;
+      it.steps = Engine.localSplit(QMAP[it.questId]).map((x) => ({ ...x, done: false, doneAt: null }));
       App.commit();
       Main.refresh();
       toast('작은 단계로 나눴어요. 첫 단계는 2분이면 충분해요!');
@@ -2868,17 +2699,12 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       });
       const out = $('#op-out', wrap), go = $('#op-go', wrap);
       let tries = 0;   // "다시 만들기"마다 다른 표현
-      go.addEventListener('click', async () => {
-        go.disabled = true;
-        out.innerHTML = thinking('삼일이가 메시지를 쓰는 중');
-        let msgs, source = 'ai';
-        try { msgs = await AIQuest.openers(App.state, q, { ...o }); }
-        catch (e) { msgs = localOpeners(App.state, q, { ...o, n: tries }); source = 'rule'; }
+      go.addEventListener('click', () => {
+        const msgs = localOpeners(App.state, q, { ...o, n: tries });
         tries += 1;
-        go.disabled = false;
         go.textContent = '다시 만들기';
         const tones = [['polite', '정중하게'], ['friendly', '친근하게'], ['short', '짧고 가볍게']];
-        out.innerHTML = `<p class="req-note">${sourceTag(source)} 그대로 쓰거나 조금 고쳐서 보내보세요</p>
+        out.innerHTML = `<p class="req-note">그대로 쓰거나 조금 고쳐서 보내보세요</p>
           ${tones.map(([k, l]) => `<div class="msg">
             <div class="msg-head"><b>${l}</b><button type="button" class="btn btn-secondary xs" data-copy="${k}">복사하기</button></div>
             <p class="msg-text" id="msg-${k}">${esc(msgs[k])}</p></div>`).join('')}`;
@@ -3108,8 +2934,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       const s = App.state;
       const sum = weekSummary(s, wk), prev = weekSummary(s, addDays(wk, -7));
       const saved = s.weeklyReports[wk];
-      let comment = saved?.comment && saved.commentSource === 'ai' ? saved.comment : localWeeklyComment(sum);
-      let source = saved?.commentSource === 'ai' ? 'ai' : 'rule';
+      const comment = localWeeklyComment(sum);
       const delta = (a, b) => (a > b ? `<span class="up">▲ ${a - b}</span>` : '');
       const total = sum.quests || 1;
       const catRows = Object.entries(sum.byCat).sort((a, b) => b[1] - a[1]);
@@ -3119,7 +2944,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
         el.innerHTML = `
           <header class="page-head"><button type="button" class="icon-btn" data-close-page aria-label="닫기">${BACK_ICON}</button><h2>이번 주 리포트</h2><span class="sec-sub">${fmtShort(wk)}~${fmtShort(sum.end)}</span></header>
           <div class="page-body">
-            <div class="talk">${mascot('sm')}<div class="bubble report-bubble"><p>${esc(comment.comment)}</p><p class="next">👉 ${esc(comment.next)}</p>${sourceTag(source)}</div></div>
+            <div class="talk">${mascot('sm')}<div class="bubble report-bubble"><p>${esc(comment.comment)}</p><p class="next">👉 ${esc(comment.next)}</p></div></div>
             <div class="tiles">
               <div class="tile"><small>완료한 퀘스트</small><b>${sum.quests}<span>개</span></b>${delta(sum.quests, prev.quests)}<em>지난주 ${prev.quests}</em></div>
               <div class="tile"><small>획득 XP</small><b>${sum.xp}<span>XP</span></b>${delta(sum.xp, prev.xp)}<em>지난주 ${prev.xp}</em></div>
@@ -3141,14 +2966,8 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
       };
       draw();
       Overlay.push(el, 'page');
-      const save = () => {
-        s.weeklyReports[wk] = { quests: sum.quests, xp: sum.xp, people: sum.people, byCat: sum.byCat, comment, commentSource: source, generatedAt: nowISO() };
-        App.commit();
-      };
-      save();
-      if (source !== 'ai') {
-        AIQuest.weekly(s, sum).then((c) => { comment = c; source = 'ai'; save(); if (el.isConnected) draw(); }).catch(() => {});
-      }
+      s.weeklyReports[wk] = { quests: sum.quests, xp: sum.xp, people: sum.people, byCat: sum.byCat, comment, generatedAt: nowISO() };
+      App.commit();
     },
   };
 
@@ -3258,7 +3077,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           const demo = buildDemoState();
           demo.meta.demoMode = true;
           App.setState(demo);
-          Main.req = { text: '', loading: false, result: null };
+          Main.req = { text: '', result: null };
           Main.enter('settings');
           toast('데모 데이터로 바꿨어요 (2주 기록 + 배지)');
         } else {
@@ -3266,7 +3085,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
           if (real) {
             App.setState(real);
             DemoBackup.clear();
-            Main.req = { text: '', loading: false, result: null };
+            Main.req = { text: '', result: null };
             Main.enter('settings');
             toast('내 기록으로 돌아왔어요');
           } else {
@@ -3315,7 +3134,7 @@ JSON으로만 답해: {"comment":"40자 이내 칭찬/관찰","next":"40자 이�
   };
   /* 다음 단계에서 콘솔/다른 모듈이 접근할 수 있도록 노출 */
   window.AssociateQuest = {
-    App, Store, Onboarding, Main, Detail, Report, Engine, AI, AIQuest, Progress, Clock, Badges, STEP,
+    App, Store, Onboarding, Main, Detail, Report, Engine, Progress, Clock, Badges, STEP,
     constants: { DIVISIONS, INTEREST_GROUPS, NETWORKING_STYLES, DAILY_GOALS, XP_PER_LEVEL, QUESTS, CATEGORIES, TARGETS, BADGES },
     helpers: { createInitialState, migrate, normalizeProfile, levelInfo, levelOf, titleOf, tenureMonth, mascotSVG, weekSummary, localOpeners, buildDemoState },
   };

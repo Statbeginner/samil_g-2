@@ -510,15 +510,15 @@ button { cursor: pointer; }
 .link-btn { align-self: flex-end; min-height: 40px; padding: 0 6px; border: 0; background: transparent; color: var(--fg-muted); font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
 .link-btn:hover { color: var(--fg); }
 
-.ask-head { display: flex; gap: 10px; align-items: center; }
-.ask-head .mascot-wrap { animation: none; }
-.ask-row { display: flex; gap: 8px; align-items: center; }
-.ask-row .text-input { flex: 1; min-width: 0; }
-.req-result { display: flex; flex-direction: column; gap: 10px; }
 .req-note { margin: 0; font-size: 14px; color: var(--fg-muted); }
-.mini-q { --cat: #888; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: var(--surface-2); }
-.mini-q .q-main { flex: 1 1 160px; }
-.mini-q .btn { margin-left: auto; }
+.done-group > summary {
+  display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: 10px 16px; border-radius: 14px;
+  background: var(--surface-2); color: var(--fg-muted); font-family: var(--font-display); font-size: 15px; cursor: pointer; list-style: none;
+}
+.done-group > summary::-webkit-details-marker { display: none; }
+.done-group > summary::after { content: '▾'; }
+.done-group[open] > summary::after { content: '▴'; }
+.done-group > .q-list { margin-top: 10px; }
 
 .level-card { gap: 12px; }
 .lv-row { display: flex; align-items: center; gap: 14px; }
@@ -1031,7 +1031,7 @@ select.text-input { appearance: auto; }
   const STEP_XP = 0;   // 쪼갠 단계는 XP 없음 (퀘스트를 끝내야 XP)
   const SWAP_COST = 10;
   const START_GEMS = 30;
-  const REQUEST_LIMIT = 3;
+  const EXTRA_LIMIT = 3;   // 하루에 "하나 더 받기"로 추가할 수 있는 퀘스트 수
   // 칭호: 퀘스트 110개를 한 번씩 다 하면 2,000 XP(Lv.21) → Quest Master(Lv.18)는 1,700 XP에서 획득
   const TITLES = [[18, 'Quest Master'], [12, '사내 탐험가'], [7, '인싸 Associate'], [3, '루키 Associate'], [1, '신입 Associate']];
   const levelOf = (xp) => Math.floor((xp || 0) / XP_PER_LEVEL) + 1;
@@ -1199,7 +1199,6 @@ select.text-input { appearance: auto; }
     [/대화|수다|인사|친구|네트워킹|스몰토크/, 'smalltalk'], [/행사|타운홀|모임|봉사/, 'event'],
     [/성장|독서|책|영어|엑셀|자기계발/, 'growth'], [/용어|단어/, 'terms'], [/대인관계|관계|클라이언트|고객|상사|갈등|보고/, 'relation'],
   ];
-  const REQUEST_CHIPS = ['점심 5분', '퇴근 전 15분', '혼자 할 수 있는 것', '누군가 만나고 싶어'];
   const SWAP_REASONS = [
     { id: 'not_interested', label: '지금은 관심 없어요', hint: '이 카테고리를 당분간 덜 추천해요' },
     { id: 'no_time',        label: '시간이 없어요',      hint: '며칠간 짧은 퀘스트 위주로 추천해요' },
@@ -1318,46 +1317,14 @@ select.text-input { appearance: auto; }
       const rand = rng(`${item.uid}|${reason}|${s.swapHistory.length}`);
       return weightedPick(pool, (x) => this.weightOf(x, ctx), rand);
     },
-    // "삼일이에게 요청하기" — 키워드 매칭
-    matchRequest(s, text) {
-      const t = text;
-      let max = null;
-      const m = t.match(/(\d+)\s*분/);
-      if (m) max = Number(m[1]);
-      else if (/한\s*시간|1\s*시간/.test(t)) max = 60;
-      else if (/잠깐|짧게|금방/.test(t)) max = 10;
-      const solo = /혼자|조용히/.test(t);
-      const social = !solo && /만나|사람|커피|같이|함께|누군가|대화/.test(t);
-      const cats = new Set();
-      if (/업무|일\s*관련|실무/.test(t)) ['study', 'feedback', 'terms', 'growth'].forEach((c) => cats.add(c));
-      KEYWORD_CATS.forEach(([re, c]) => { if (re.test(t)) cats.add(c); });
-      let stage = null;
-      if (/클라이언트|고객|담당자/.test(t)) stage = 5; else if (/타\s*본부|다른\s*본부/.test(t)) stage = 4; else if (/선배/.test(t)) stage = 3; else if (/동기/.test(t)) stage = 1; else if (/팀/.test(t)) stage = 2;
-      const inToday = new Set(s.dailyQuests.items.map((i) => i.questId));
-      let pool = QUESTS.filter((q) => !inToday.has(q.id));
-      if (max != null) pool = narrow(pool, (q) => q.minutes <= max);
-      if (solo) pool = narrow(pool, (q) => !q.together);
-      if (social) pool = narrow(pool, (q) => q.together);
-      const w = this.weights(s);
-      const rand = rng(t + Clock.today());
-      const scored = pool.map((q) => ({ q, score: (cats.has(q.cat) ? 5 : 0) + (stage && q.stage === stage ? 4 : 0) + (max != null && max >= 15 ? (q.minutes / max) * 2.5 : 0) + Math.log(1 + w[q.cat]) + rand() * 1.5 }))
-        .sort((a, b) => b.score - a.score);
-      const picks = [], usedCats = new Set();
-      for (const x of scored) {
-        if (picks.length >= 3) break;
-        if (usedCats.has(x.q.cat) && scored.length > 6) continue;
-        picks.push(x.q); usedCats.add(x.q.cat);
-      }
-      const tags = [];
-      if (max != null) tags.push(`${max}분 이내`);
-      if (solo) tags.push('혼자 할 수 있는');
-      if (social) tags.push('사람을 만나는');
-      if (stage) tags.push(`${TARGETS[stage].short} 대상`);
-      [...cats].slice(0, 2).forEach((c) => tags.push(CATEGORIES[c].label));
-      return {
-        picks: picks.map((q) => ({ id: q.id, reason: this.reasonFor(s, q, q.quick ? 'quick' : 'main') })),
-        note: tags.length ? `${tags.join(' · ')} 퀘스트로 골랐어요` : '지금 해보기 좋은 퀘스트로 골랐어요',
-      };
+    // "퀘스트 하나 더 받기": 오늘 퀘스트·최근 3일 완료를 빼고, 오늘 없는 카테고리를 우선해 관심사 가중치로 1개
+    pickExtra(s) {
+      const ctx = this.ctx(s), dq = s.dailyQuests;
+      const inToday = new Set(dq.items.map((i) => i.questId));
+      const todayCats = new Set(dq.items.map((i) => QMAP[i.questId].cat));
+      const pool = narrow(this.candidates(s, { exclude: new Set([...inToday, ...this.recentDone(s, 3)]), ctx }).filter((q) => !inToday.has(q.id)), (q) => !todayCats.has(q.cat));
+      if (!pool.length) return null;
+      return weightedPick(pool, (x) => this.weightOf(x, ctx), rng(`${dq.date}|extra|${dq.added || 0}|${s.profile.nickname}`));
     },
     // 퀘스트 쪼개기 기본 템플릿 (첫 단계는 항상 2분 이내)
     localSplit(q) {
@@ -2339,7 +2306,7 @@ select.text-input { appearance: auto; }
     tab: 'home',
     histFilter: 'all',
     histScroll: 0,
-    req: { text: '', result: null },
+    doneOpen: false,
     bound: false,
 
     enter(tab = 'home') {
@@ -2368,7 +2335,7 @@ select.text-input { appearance: auto; }
       if (s.dailyQuests.date !== t) {
         const prev = s.dailyQuests.items.map((i) => i.questId);
         s.dailyQuests = { date: t, items: Engine.pickDaily(s, t, prev), added: 0 };
-        this.req = { text: '', result: null };
+        this.doneOpen = false;
         changed = true;
       }
       if (changed) App.commit();
@@ -2450,7 +2417,7 @@ select.text-input { appearance: auto; }
           <span class="q-top">
             <span class="q-cat">${c.label}</span>
             ${q.quick ? '<span class="pill quick">⚡ 빠른 퀘스트</span>' : ''}
-            ${it.slot === 'request' ? '<span class="pill">요청</span>' : ''}
+            ${it.slot === 'request' ? '<span class="pill">추가</span>' : ''}
             <span class="status-pill ${it.status}">${statusLabel[it.status]}</span>
           </span>
           <span class="q-title">${esc(q.title)}</span>
@@ -2466,7 +2433,8 @@ select.text-input { appearance: auto; }
   const HomeTab = {
     render(el) {
       const s = App.state, dq = s.dailyQuests;
-      const done = dq.items.filter((i) => i.status === 'done').length;
+      const doneItems = dq.items.filter((i) => i.status === 'done'), active = dq.items.filter((i) => i.status !== 'done');
+      const left = EXTRA_LIMIT - (dq.added || 0);
       const lv = levelInfo(s.stats.totalXP), level = lv.level;
       el.innerHTML = `
         <div class="talk home-talk">${mascot('sm')}<p class="bubble">${esc(Greeting.text(s))}</p></div>
@@ -2474,21 +2442,12 @@ select.text-input { appearance: auto; }
         <section class="sec" aria-labelledby="h-today">
           <div class="sec-head">
             <h2 class="sec-title" id="h-today">오늘의 퀘스트</h2>
-            <span class="sec-sub">${done}/${dq.items.length} 완료</span>
+            <span class="sec-sub">${doneItems.length}/${dq.items.length} 완료</span>
           </div>
-          <div class="q-list">${dq.items.map(questCardHTML).join('')}</div>
-        </section>
-
-        <section class="card ask-card" aria-labelledby="h-ask">
-          <div class="ask-head">${mascot('xs')}<div><h2 class="sec-title" id="h-ask">삼일이에게 요청하기</h2><p class="sec-sub">상황을 알려주면 딱 맞는 퀘스트를 골라줄게요</p></div></div>
-          <div class="tags">${REQUEST_CHIPS.map((c) => `<button type="button" class="tag sm" data-chip="${c}">${c}</button>`).join('')}</div>
-          <div class="ask-row">
-            <label class="sr-only" for="ask-input">요청 내용</label>
-            <input id="ask-input" class="text-input sm" type="text" enterkeyhint="send" autocomplete="off"
-              placeholder="예: 오늘 오후에 30분 정도 비는데 업무 관련으로 추천해줘" value="${esc(Main.req.text)}">
-            <button type="button" class="btn btn-accent sm" id="ask-go">추천</button>
-          </div>
-          <div id="ask-result" aria-live="polite">${this.requestResultHTML()}</div>
+          ${active.length ? `<div class="q-list">${active.map(questCardHTML).join('')}</div>` : '<p class="banner ok center">🎉 오늘의 퀘스트를 모두 끝냈어요!</p>'}
+          <button type="button" class="btn btn-secondary" id="extra-go" ${left <= 0 ? 'disabled' : ''}>${left <= 0 ? '오늘은 더 받을 수 없어요' : `➕ 퀘스트 하나 더 받기 · ${dq.added || 0}/${EXTRA_LIMIT}`}</button>
+          ${doneItems.length ? `<details class="done-group" ${Main.doneOpen ? 'open' : ''}><summary>완료한 퀘스트 ${doneItems.length}개</summary>
+            <div class="q-list">${doneItems.map(questCardHTML).join('')}</div></details>` : ''}
         </section>
 
         <section class="card level-card" aria-labelledby="h-level">
@@ -2501,61 +2460,22 @@ select.text-input { appearance: auto; }
         </section>`;
       this.bind(el);
     },
-    requestResultHTML() {
-      const r = Main.req, dq = App.state.dailyQuests;
-      if (!r.result) return '';
-      const left = REQUEST_LIMIT - (dq.added || 0);
-      const inToday = new Set(dq.items.map((i) => i.questId));
-      return `<div class="req-result">
-        <p class="req-note">${esc(r.result.note)}</p>
-        ${r.result.picks.map((p) => {
-          const q = QMAP[p.id], added = inToday.has(p.id);
-          return `<div class="mini-q" style="${catVar(q.cat)}">
-            <span class="cat-icon sm" aria-hidden="true">${CATEGORIES[q.cat].emoji}</span>
-            <span class="q-main"><span class="q-title sm">${esc(q.title)}</span>
-              <span class="q-meta"><span>⏱ ${q.minutes}분</span><span class="xp">+${q.xp} XP</span><span>${q.together ? `👥 ${TARGETS[q.stage].short}` : '🙋 혼자'}</span>${q.quick ? '<span>⚡</span>' : ''}</span>
-              <span class="q-reason">${esc(p.reason)}</span></span>
-            <button type="button" class="btn btn-secondary xs" data-add="${p.id}" ${added || left <= 0 ? 'disabled' : ''}>${added ? '추가됨' : '오늘의 퀘스트에 추가'}</button>
-          </div>`;
-        }).join('')}
-        <p class="sec-sub">오늘 추가 ${dq.added || 0}/${REQUEST_LIMIT}${left <= 0 ? ' · 오늘은 더 추가할 수 없어요' : ''}</p>
-      </div>`;
-    },
     bind(el) {
       el.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => Detail.open(b.dataset.open)));
       el.querySelectorAll('[data-swap]').forEach((b) => b.addEventListener('click', () => Swap.open(b.dataset.swap)));
-      const input = $('#ask-input', el);
-      input.addEventListener('input', () => { Main.req.text = input.value; });
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !isImeEnter(e)) { e.preventDefault(); this.ask(input.value); } });
-      $('#ask-go', el).addEventListener('click', () => this.ask(input.value));
-      el.querySelectorAll('[data-chip]').forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.chip; Main.req.text = b.dataset.chip; this.ask(b.dataset.chip); }));
-      this.bindResult(el);
+      $('#extra-go', el).addEventListener('click', () => this.addExtra());
+      el.querySelector('.done-group')?.addEventListener('toggle', (e) => { Main.doneOpen = e.currentTarget.open; });
     },
-    bindResult(el) {
-      el.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => this.add(b.dataset.add)));
-    },
-    redrawResult() {
-      const box = $('#ask-result');
-      if (!box) return;
-      box.innerHTML = this.requestResultHTML();
-      this.bindResult(box);
-    },
-    ask(text) {
-      text = (text || '').trim();
-      if (!text) { toast('요청 내용을 입력하거나 위의 칩을 눌러주세요.'); $('#ask-input')?.focus(); return; }
-      Main.req = { text, result: Engine.matchRequest(App.state, text) };
-      this.redrawResult();
-    },
-    add(id) {
+    addExtra() {
       const s = App.state, dq = s.dailyQuests;
-      if ((dq.added || 0) >= REQUEST_LIMIT) { toast('요청 퀘스트는 하루 3개까지 추가할 수 있어요.'); return; }
-      if (dq.items.some((i) => i.questId === id)) return;
-      const pick = Main.req.result?.picks.find((p) => p.id === id);
-      dq.items.push(Engine.makeItem(s, QMAP[id], 'request', dq.date, pick?.reason));
+      if ((dq.added || 0) >= EXTRA_LIMIT) return;
+      const q = Engine.pickExtra(s);
+      if (!q) { toast('지금은 더 추천할 퀘스트가 없어요.'); return; }
+      dq.items.push(Engine.makeItem(s, q, 'request', dq.date));
       dq.added = (dq.added || 0) + 1;
       App.commit();
       Main.render();
-      toast('오늘의 퀘스트에 추가했어요');
+      toast(`새 퀘스트를 받았어요 · 오늘 ${dq.added}/${EXTRA_LIMIT}`);
     },
   };
 
@@ -3117,7 +3037,6 @@ select.text-input { appearance: auto; }
           const demo = buildDemoState();
           demo.meta.demoMode = true;
           App.setState(demo);
-          Main.req = { text: '', result: null };
           Main.enter('settings');
           toast('데모 데이터로 바꿨어요 (2주 기록 + 배지)');
         } else {
@@ -3125,7 +3044,6 @@ select.text-input { appearance: auto; }
           if (real) {
             App.setState(real);
             DemoBackup.clear();
-            Main.req = { text: '', result: null };
             Main.enter('settings');
             toast('내 기록으로 돌아왔어요');
           } else {

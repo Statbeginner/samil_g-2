@@ -823,9 +823,9 @@ select.text-input { appearance: auto; }
     { id: 'axnode',     label: 'AX Node',  desc: 'AI 전환 · 데이터 · 디지털 혁신', teamExample: 'AX 전략팀',   icon: 'ax' },
     { id: 'other',      label: '기타',     desc: '지원 조직 등 그 밖의 소속', teamExample: '인사팀',       icon: 'other' },
   ];
-  // 퀘스트 목록 - 통합질문서.csv 카테고리 10개 (표시 이름 · 엑셀 괄호 안 설명)
+  // 퀘스트 목록 - 통합질문서.csv 카테고리 10개 + 대인관계 (표시 이름 · 괄호 안 설명)
   const INTEREST_GROUPS = [
-    { id: 'work', label: '업무', items: [['커리어', '진로'], ['스터디', '회계산업 이슈·AI·택스 개정'], ['업무 피드백', ''], ['성장', '업무 관련·무관'], ['업무용어', '']] },
+    { id: 'work', label: '업무', items: [['커리어', '진로'], ['스터디', '회계산업 이슈·AI·택스 개정'], ['업무 피드백', ''], ['성장', '업무 관련·무관'], ['업무용어', ''], ['대인관계', '클라이언트·상사·동료']] },
     { id: 'life', label: '일상', items: [['맛집', '점심·식사'], ['취미·동호회', '취미활동·사내동호회'], ['체력·스트레스', '체력·스트레스 관리'], ['스몰토크', '네트워킹'], ['조직행사', '조직행사 참여']] },
   ];
   const INTEREST_LABELS = INTEREST_GROUPS.flatMap((g) => g.items.map(([l]) => l));
@@ -995,7 +995,7 @@ select.text-input { appearance: auto; }
 
   /* =========================================================
    * 11. 퀘스트 카탈로그 (퀘스트 목록 - 통합질문서.csv 기반)
-   *     카테고리 10개 × 미션 100개. 목록에 있는 미션만 퀘스트로 제공
+   *     카테고리 11개 × 미션 110개. 목록에 있는 미션만 퀘스트로 제공
    * ========================================================= */
   const CATEGORIES = {
     // label = 앱 표시 이름, detail = 엑셀 카테고리 괄호 안 설명, ask = 첫마디 도우미의 연락 목적
@@ -1009,25 +1009,27 @@ select.text-input { appearance: auto; }
     event:     { label: '조직행사',     detail: '조직행사 참여',               emoji: '🎤', color: '#D2414F', ask: '행사 이야기를 나눠보고 싶어서' },
     growth:    { label: '성장',         detail: '업무 관련·무관',              emoji: '🌱', color: '#5E8F1F', work: true, ask: '배운 점을 나눠보고 싶어서' },
     terms:     { label: '업무용어',     detail: '',                         emoji: '🔤', color: '#3B5BA9', work: true, ask: '업무 용어를 하나 여쭤보고 싶어서' },
+    relation:  { label: '대인관계',     detail: '클라이언트·상사·동료',          emoji: '🤝', color: '#0F8FB3', work: true, ask: '함께 일하는 데 도움이 될 것 같아서' },
   };
-  // 퀘스트를 함께할 대상 (퀘스트 데이터의 숫자 1~4)
+  // 퀘스트를 함께할 대상 (퀘스트 데이터의 숫자 1~5)
   const TARGETS = {
     1: { target: '동기',          short: '동기' },
     2: { target: '팀 동료',       short: '팀 동료' },
     3: { target: '선배',          short: '선배' },
     4: { target: '타본부 구성원', short: '타본부' },
+    5: { target: '클라이언트',    short: '클라이언트' },
   };
   const DIFFICULTY = { easy: { label: '쉬움', xp: 10, gems: 5 }, normal: { label: '보통', xp: 20, gems: 7 }, hard: { label: '도전', xp: 40, gems: 10 } };
   const STEP_XP = 0;   // 쪼갠 단계는 XP 없음 (퀘스트를 끝내야 XP)
   const SWAP_COST = 10;
   const START_GEMS = 30;
   const REQUEST_LIMIT = 3;
-  // 칭호: 퀘스트 100개를 한 번씩 다 하면 1,840 XP(Lv.19) → Quest Master는 약 92개(1,700 XP)에서 획득
+  // 칭호: 퀘스트 110개를 한 번씩 다 하면 2,000 XP(Lv.21) → Quest Master(Lv.18)는 1,700 XP에서 획득
   const TITLES = [[18, 'Quest Master'], [12, '사내 탐험가'], [7, '인싸 Associate'], [3, '루키 Associate'], [1, '신입 Associate']];
   const levelOf = (xp) => Math.floor((xp || 0) / XP_PER_LEVEL) + 1;
   const titleOf = (lv) => TITLES.find(([l]) => lv >= l)[1];
 
-  // 난이도: 대상 기준(동기=쉬움, 팀·선배=보통, 타본부=도전), 40분 이상이면 한 단계 위, 5분 이내면 한 단계 아래
+  // 난이도: 대상 기준(동기=쉬움, 팀·선배·클라이언트=보통, 타본부=도전), 40분 이상이면 한 단계 위, 5분 이내면 한 단계 아래
   function difficultyOf(stage, minutes) {
     const order = ['easy', 'normal', 'hard'];
     let i = stage === 1 ? 0 : stage === 4 ? 2 : 1;
@@ -1038,7 +1040,7 @@ select.text-input { appearance: auto; }
 
   // 받침 있으면 '과', 없으면 '와'
   const josaWa = (word) => { const c = String(word).trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; };
-  // [ID, 카테고리, 대상(1 동기·2 팀 동료·3 선배·4 타본부), 미션(원문), 예상 분, 함께 여부, 세부 구분] — 퀘스트 목록 - 통합질문서.csv
+  // [ID, 카테고리, 대상(1 동기·2 팀 동료·3 선배·4 타본부·5 클라이언트), 미션(원문), 예상 분, 함께 여부, 세부 구분] — 퀘스트 목록 - 통합질문서.csv
   //   목록에 그대로 남은 미션은 기존 ID 유지(진행 기록·배지 보존), 새 미션은 Q101부터 번호 부여
   //   대상·시간·함께 여부는 목록에 없어서 미션 문장에서 추정 (선배→선배, 동기→동기, 동료→팀 동료, 다른 본부·처음 만난 분→타본부, 사람 없음→혼자)
   const QUEST_ROWS = [
@@ -1142,12 +1144,24 @@ select.text-input { appearance: auto; }
     ["Q099", "terms", 1, "업무 메일에서 모르는 표현 하나를 찾아 뜻을 확인해보세요.", 5, false, ""],
     ["Q100", "terms", 1, "용어 퀴즈를 하나 만들어 동기에게 내보세요.", 10, true, ""],
     ["Q132", "terms", 4, "다른 본부에서는 자주 쓰는데 내 본부 사람들은 잘 모르는 용어가 있는지 다른 본부 사람에게 질문해보세요.", 15, true, ""],
+    // 대인관계: 업무 중에 원래 하는 행동에 관계를 한 겹 얹는 미션
+    ["Q153", "relation", 5, "클라이언트에 자료 요청 메일을 보낼 때, 왜 필요한지와 회신 희망일을 한 줄씩 넣어 보내보세요.", 10, true, ""],
+    ["Q154", "relation", 5, "요청한 자료를 받으면 그날 안에 \"잘 받았습니다, 감사합니다\"라고 회신해보세요.", 3, true, ""],
+    ["Q155", "relation", 5, "현장 첫날, 클라이언트 담당자에게 먼저 다가가 이름과 맡은 업무를 소개해보세요.", 5, true, ""],
+    ["Q156", "relation", 5, "클라이언트 담당자와 점심이나 커피 자리에서 업무가 아닌 이야기를 하나 나눠보세요.", 30, true, ""],
+    ["Q157", "relation", 3, "퇴근 전, 인차지(현장 책임자) 선배에게 오늘 한 일과 내일 할 일을 3줄로 보고해보세요.", 5, true, ""],
+    ["Q158", "relation", 3, "리뷰 노트(조서 검토 의견)를 반영한 뒤, 선배에게 어디를 어떻게 고쳤는지 한 줄로 알려보세요.", 5, true, ""],
+    ["Q159", "relation", 3, "막힌 부분을 질문할 때는 '제가 확인한 것 / 아직 모르는 것'을 나눠 정리해서 선배에게 가져가보세요.", 10, true, ""],
+    ["Q160", "relation", 2, "같은 현장에서 야근하는 팀원에게 음료나 간식 하나를 챙겨 건네보세요.", 5, true, ""],
+    ["Q161", "relation", 4, "세무·IT 등 다른 본부 전문가에게 자료를 넘길 때, 무엇을 봐주면 되는지 요약 한 줄을 붙여 보내보세요.", 10, true, ""],
+    ["Q162", "relation", 1, "동기와 각자 쓴 자료 요청 메일을 바꿔 읽고, 좋은 표현을 하나씩 가져와보세요.", 10, true, ""],
   ];
   const TARGET_TIPS = {
     1: '메신저로 가볍게 먼저 말을 걸어봐요. 답이 오면 내 이야기도 하나 덧붙이면 대화가 이어져요.',
     2: '바쁘지 않은 타이밍에 자리 근처에서 가볍게 시작해보세요. 점심이나 커피 시간이 좋아요.',
     3: '"잠깐 여쭤봐도 될까요?"로 시작하면 부담이 줄어요. 커피 타이밍을 노려보세요.',
     4: '먼저 내 소속과 이름을 한 줄로 소개하고 시작하면 자연스러워요.',
+    5: '담당자님의 시간을 아껴드린다는 마음으로, 용건부터 짧게 말해보세요.',
   };
   const SOLO_TIP = '혼자 바로 할 수 있어요. 5분만 내서 지금 바로 해봐요.';
   const QUESTS = QUEST_ROWS.map(([id, cat, stage, title, minutes, together, sub]) => {
@@ -1162,7 +1176,7 @@ select.text-input { appearance: auto; }
   const targetLabel = (q) => (q.together ? TARGETS[q.stage].target : '혼자');
   const QMAP = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
 
-  // 관심사 = 엑셀 카테고리 10개 (1:1 연결)
+  // 관심사 = 카테고리 11개 (1:1 연결)
   const INTEREST_MAP = Object.fromEntries(Object.entries(CATEGORIES).map(([id, c]) => [c.label, [id]]));
   // v7 이전 관심사 → 새 카테고리 (기존 사용자 데이터 변환용)
   const LEGACY_INTEREST_MAP = {
@@ -1175,7 +1189,7 @@ select.text-input { appearance: auto; }
     [/공부|스터디|세법|회계|AI|데이터|기준서|감사|ESG/i, 'study'], [/러닝|등산|합창|동호회|취미|음악|게임|사진|여행/, 'hobby'],
     [/피드백|리뷰|조서/, 'feedback'], [/운동|헬스|요가|건강|스트레스|산책|필라테스/, 'health'],
     [/대화|수다|인사|친구|네트워킹|스몰토크/, 'smalltalk'], [/행사|타운홀|모임|봉사/, 'event'],
-    [/성장|독서|책|영어|엑셀|자기계발/, 'growth'], [/용어|단어/, 'terms'],
+    [/성장|독서|책|영어|엑셀|자기계발/, 'growth'], [/용어|단어/, 'terms'], [/대인관계|관계|클라이언트|고객|상사|갈등|보고/, 'relation'],
   ];
   const REQUEST_CHIPS = ['점심 5분', '퇴근 전 15분', '혼자 할 수 있는 것', '누군가 만나고 싶어'];
   const SWAP_REASONS = [
@@ -1310,7 +1324,7 @@ select.text-input { appearance: auto; }
       if (/업무|일\s*관련|실무/.test(t)) ['study', 'feedback', 'terms', 'growth'].forEach((c) => cats.add(c));
       KEYWORD_CATS.forEach(([re, c]) => { if (re.test(t)) cats.add(c); });
       let stage = null;
-      if (/타\s*본부|다른\s*본부/.test(t)) stage = 4; else if (/선배/.test(t)) stage = 3; else if (/동기/.test(t)) stage = 1; else if (/팀/.test(t)) stage = 2;
+      if (/클라이언트|고객|담당자/.test(t)) stage = 5; else if (/타\s*본부|다른\s*본부/.test(t)) stage = 4; else if (/선배/.test(t)) stage = 3; else if (/동기/.test(t)) stage = 1; else if (/팀/.test(t)) stage = 2;
       const inToday = new Set(s.dailyQuests.items.map((i) => i.questId));
       let pool = QUESTS.filter((q) => !inToday.has(q.id));
       if (max != null) pool = narrow(pool, (q) => q.minutes <= max);
@@ -1339,11 +1353,18 @@ select.text-input { appearance: auto; }
     },
     // 퀘스트 쪼개기 기본 템플릿 (첫 단계는 항상 2분 이내)
     localSplit(q) {
-      const noun = { 1: '동기', 2: '팀 동료', 3: '선배', 4: '타본부 구성원' }[q.stage];
+      const noun = { 1: '동기', 2: '팀 동료', 3: '선배', 4: '타본부 구성원', 5: '클라이언트 담당자' }[q.stage];
       if (q.together && q.minutes <= 5) {
         return [
           { text: `인사를 건넬 ${noun} 한 명 떠올리기`, minutes: 1 },
           { text: '건넬 첫마디 한 문장 정해두기', minutes: 2 },
+          { text: q.title, minutes: q.minutes },
+        ];
+      }
+      if (q.together && q.stage === 5) {
+        return [
+          { text: `오늘 연락할 ${noun} 한 명 정하기`, minutes: 1 },
+          { text: '보낼 문장 한 줄 써두기 (첫마디 도우미 활용)', minutes: 3 },
           { text: q.title, minutes: q.minutes },
         ];
       }
@@ -1442,6 +1463,16 @@ select.text-input { appearance: auto; }
     Q097: { h: '신입이 꼭 알아야 할 업무 용어 3개를 추천받고 싶어요.' },
     Q100: { h: '용어 퀴즈를 하나 만들어 봤는데 한번 풀어봐 주실래요?', c: '용어 퀴즈 하나 만들어 봤는데 풀어볼래? ㅎㅎ', inv: true },
     Q132: { h: '다른 본부에서는 자주 쓰는데 저희 본부에선 잘 모르는 용어가 있는지 궁금해요.' },
+    Q153: { h: '요청드릴 자료가 있어 연락드렸어요. 필요한 이유와 회신 부탁드리는 날짜를 함께 적어 두었습니다.' },
+    Q154: { h: '요청드린 자료 잘 받았습니다. 바쁘신 중에 챙겨주셔서 감사합니다.', say: true },
+    Q155: { h: '이번에 함께 일하게 되어 인사드리러 왔어요. 제가 맡은 업무를 간단히 말씀드릴게요.', say: true },
+    Q156: { h: '이번 주 중에 점심이나 커피 한번 함께하시면 좋겠어요.', inv: true },
+    Q157: { h: '오늘 진행 상황과 내일 할 일을 세 줄로 정리해 보고드려요.', say: true },
+    Q158: { h: '주신 리뷰 노트 반영했어요. 고친 부분을 한 줄로 정리해 두었습니다.', say: true },
+    Q159: { h: '막힌 부분이 있어서, 제가 확인한 것과 아직 모르는 것을 나눠 정리해 왔어요. 잠깐 봐주실 수 있을까요?' },
+    Q160: { h: '오늘 늦게까지 고생 많으세요. 음료 하나 드리고 싶어서요.', c: '오늘 늦게까지 고생 많아. 음료 하나 사 왔어!', say: true },
+    Q161: { h: '자료 전달드려요. 봐주셨으면 하는 부분을 맨 위에 한 줄로 정리해 두었습니다.', say: true },
+    Q162: { h: '각자 쓴 자료 요청 메일을 바꿔 읽어보면 좋을 것 같아서요.', c: '각자 쓴 자료 요청 메일 서로 바꿔 읽어볼래?', inv: true },
   };
   const hasBatchim = (word) => { const c = String(word).trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 > 0; };
   function localOpeners(s, q, o) {
@@ -1449,7 +1480,7 @@ select.text-input { appearance: auto; }
     const line = OPENER_LINES[q.id] || { h: `${q.ask || '이야기 나눠보고 싶어서'} 연락드렸어요.` };
     const pick = (arr) => arr[(o.n || 0) % arr.length];
     const join = (...xs) => xs.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-    const call = o.rank === 'manager' ? '매니저님' : o.rank === 'senior' ? '선배님' : '';
+    const call = q.stage === 5 ? '담당자님' : o.rank === 'manager' ? '매니저님' : o.rank === 'senior' ? '선배님' : '';
     const hi = call ? `안녕하세요, ${call}!` : '안녕하세요!';
     const me = `${p.team} ${p.nickname}`;
     const msg = o.channel === 'messenger';
@@ -1580,7 +1611,7 @@ select.text-input { appearance: auto; }
   }
 
   /* =========================================================
-   * 16-2. 배지 (카테고리 10종 + 첫 발걸음)
+   * 16-2. 배지 (카테고리 11종 + 첫 발걸음)
    *       카테고리 배지 = 그 카테고리의 👥함께하는 퀘스트를 동기·팀 동료·선배·타본부 네 대상 모두와 완료
    *       altName: 기획 검토용 대안 이름 (name과 바꾸면 바로 반영)
    * ========================================================= */
@@ -1595,6 +1626,7 @@ select.text-input { appearance: auto; }
     event:     { name: '행사장 단골',       altName: '타운홀 개근러',      message: '행사마다 아는 얼굴이 생겼어요' },
     growth:    { name: '1% 성장러',         altName: '레벨업 러너',        message: '네 사람에게서 하나씩 배웠어요' },
     terms:     { name: '걸어 다니는 용어집', altName: '약어 해독가',        message: '이제 회의 중 약어가 두렵지 않아요' },
+    relation:  { name: '신뢰 쌓는 사람',    altName: '현장 매너왕',        message: '클라이언트부터 선배까지, 일하는 관계를 넓혔어요' },
   };
   const BADGES = [
     { id: 'first_step', kind: 'first', name: '첫 발걸음', emoji: '👣', color: '#F26B1D', message: '첫 퀘스트를 완료했어요. 모든 탐험은 한 걸음부터!', rule: '퀘스트 1개를 완료하면 받아요' },
@@ -1916,7 +1948,7 @@ select.text-input { appearance: auto; }
       },
       valid: (d) => !!d.joinMonth && recentMonths().includes(d.joinMonth),
     },
-    /* 5. 관심사 — 엑셀 카테고리 10개 중에서만 선택 */
+    /* 5. 관심사 — 카테고리 11개 중에서만 선택 */
     {
       id: 'interests', bubble: () => '요즘 관심 있는 걸 모두 골라주세요',
       render(body, d, ctx) {
@@ -2685,7 +2717,7 @@ select.text-input { appearance: auto; }
       const wrap = Sheet.open(`
         <h2 class="sheet-title">첫마디 도우미</h2>
         <p class="sec-sub">"${esc(q.title)}"를 위한 첫 메시지를 3가지 톤으로 만들어드려요.</p>
-        <div class="field"><p class="field-label">상대 직급</p>${seg('rank', [['associate', 'Associate'], ['senior', 'Senior'], ['manager', 'Manager 이상']])}</div>
+        ${q.stage === 5 ? '' : `<div class="field"><p class="field-label">상대 직급</p>${seg('rank', [['associate', 'Associate'], ['senior', 'Senior'], ['manager', 'Manager 이상']])}</div>`}
         <div class="field"><p class="field-label">아는 사이인가요?</p>${seg('known', [[false, '처음 연락해요'], [true, '아는 사이예요']])}</div>
         <div class="field"><p class="field-label">연락 방법</p>${seg('channel', [['messenger', '사내 메신저'], ['inperson', '대면']])}</div>
         <button type="button" class="btn btn-primary" id="op-go">메시지 만들기</button>
@@ -2861,7 +2893,7 @@ select.text-input { appearance: auto; }
       const wk = weekStartKey(Clock.today());
       const sum = weekSummary(s, wk);
       const quests = s.questHistory.filter((h) => h.kind === 'quest').slice().reverse();
-      // 카테고리 넘기는 바: 전체 · 카테고리 10개 (완료 개수 표시)
+      // 카테고리 넘기는 바: 전체 · 카테고리 11개 (완료 개수 표시)
       const catCount = (c) => quests.filter((h) => h.category === c).length;
       const filters = [['all', '전체', quests.length],
         ...Object.keys(CATEGORIES).map((c) => [c, `${CATEGORIES[c].emoji} ${CATEGORIES[c].label}`, catCount(c)])];
